@@ -53,7 +53,7 @@ public class ChannelSession {
             sb.append(en.getKey()).append(":").append(en.getValue());
 
             if (i % 2 != 0) {
-                sb.append("\t\t");
+                sb.append("\t\t\t");
             }
 
             i++;
@@ -158,7 +158,7 @@ public class ChannelSession {
                     final PlayerCharacter pc = new PlayerCharacter(args[2]);
                     for (int i = 3; i < args.length; i++) {
                         final String[] attr = args[i].split(":");
-                        final String attrName = attr[0];
+                        final String attrName = PlayerCharacter.getStandardName(attr[0]);
                         final Integer attrVal = Integer.valueOf(attr[1]);
 
                         pc.getAttr().put(attrName, attrVal);
@@ -219,12 +219,14 @@ public class ChannelSession {
                             }
 
                             final StringBuilder reply = new StringBuilder();
+                            reply.append(curPC.getName()).append("属性更改：\n");
                             for (int i = 3; i < args.length; i += 2) {
+                                final String standardName = PlayerCharacter.getStandardName(args[i]);
                                 if (!isDigit(args[i + 1])) {
-                                    reply.append(args[i]).append("设置失败：非数字").append("\n");
+                                    reply.append(standardName).append("设置失败：非数字").append("\n");
                                 } else {
-                                    curPC.getAttr().put(args[i], Integer.valueOf(args[i + 1]));
-                                    reply.append(args[i]).append("成功设置为：").append(args[i + 1]).append("\n");
+                                    curPC.getAttr().put(standardName, Integer.valueOf(args[i + 1]));
+                                    reply.append(standardName).append("成功设置为：").append(args[i + 1]).append("\n");
                                 }
                             }
 
@@ -245,13 +247,17 @@ public class ChannelSession {
                             final StringBuilder reply = new StringBuilder();
                             reply.append(curPC.getName()).append("属性更改：\n");
                             for (int i = 3; i < args.length; i += 2) {
+                                final String standardName = PlayerCharacter.getStandardName(args[i]);
+
                                 if (!isDigit(args[i + 1])) {
-                                    reply.append(args[i]).append("更改失败：非数字").append("\n");
-                                } else if (!curPC.getAttr().containsKey(args[i])) {
-                                    reply.append(args[i]).append("更改失败：找不到属性").append("\n");
+                                    reply.append(standardName).append("更改失败：非数字").append("\n");
                                 } else {
-                                    curPC.getAttr().put(args[i], curPC.getAttr().get(args[i]) + Integer.parseInt(args[i + 1]));
-                                    reply.append(args[i]).append("成功更改为：").append(curPC.getAttr().get(args[i])).append("\n");
+                                    if (!curPC.getAttr().containsKey(standardName)) {
+                                        reply.append(standardName).append("更改失败：找不到属性").append("\n");
+                                    } else {
+                                        curPC.getAttr().put(standardName, curPC.getAttr().get(args[i]) + Integer.parseInt(args[i + 1]));
+                                        reply.append(standardName).append("成功更改为：").append(curPC.getAttr().get(args[i])).append("\n");
+                                    }
                                 }
                             }
 
@@ -313,16 +319,17 @@ public class ChannelSession {
 
                 final PlayerCharacter pc = player.getCurrentCharacter();
 
-                if (!pc.getAttr().containsKey(args[1])) {
-                    bot.reply(message, MessageBuilder.newInstance().at(message.author().id()).append(" 找不到属性").append(args[1]).append("~").build());
+                final String attrName = PlayerCharacter.getStandardName(args[1]);
+                if (!pc.getAttr().containsKey(attrName)) {
+                    bot.reply(message, MessageBuilder.newInstance().at(message.author().id()).append(" 找不到属性").append(attrName).append("~").build());
                     return;
                 }
 
                 final StringBuilder reply = new StringBuilder();
-                reply.append(pc.getName()).append("投掷").append(args[1]).append("1d100=");
+                reply.append(pc.getName()).append(" 投掷 ").append(attrName).append(" 1d100=");
 
                 final int result = new Dice().roll(DiceExpr.CHECK).total();
-                final double value = pc.getAttr().get(args[1]);
+                final double value = pc.getAttr().get(attrName);
 
                 reply.append(result).append("/").append((int) value).append(",");
 
@@ -351,7 +358,7 @@ public class ChannelSession {
                 bot.reply(message, reply.toString());
 
                 logEntries.attach(new RollLogEntry(message.content(), message.author().username(), player.getCurrentCharacter().getName(),
-                        message.timestamp(), args[1], "1d100", String.valueOf(result), null));
+                        message.timestamp(), attrName, "1d100", String.valueOf(result), null));
             }
             case ".rcpp" -> {
                 if (args.length != 2) {
@@ -367,14 +374,14 @@ public class ChannelSession {
                 }
 
                 final PlayerCharacter pc = player.getCurrentCharacter();
-
-                if (!pc.getAttr().containsKey(args[1])) {
-                    bot.reply(message, MessageBuilder.newInstance().at(message.author().id()).append(" 找不到属性").append(args[1]).append("~").build());
+                final String attrName = PlayerCharacter.getStandardName(args[1]);
+                if (!pc.getAttr().containsKey(attrName)) {
+                    bot.reply(message, MessageBuilder.newInstance().at(message.author().id()).append(" 找不到属性").append(attrName).append("~").build());
                     return;
                 }
 
                 final StringBuilder reply = new StringBuilder();
-                reply.append(pc.getName()).append("投掷").append(args[1]).append("1d100=");
+                reply.append(pc.getName()).append(" 投掷 ").append(attrName).append(" 1d100=");
 
                 int xt = new Dice().roll(DiceExpr.TEN).total();
                 int at = (new Dice().roll(DiceExpr.TEN).total() - 1) * 10;
@@ -404,7 +411,7 @@ public class ChannelSession {
                 }
 
                 final int result = Math.max(a, Math.max(b, c));
-                final double value = pc.getAttr().get(args[1]);
+                final double value = pc.getAttr().get(attrName);
 
                 final StringBuilder mod = new StringBuilder();
                 mod.append("[").append(a)
@@ -437,7 +444,7 @@ public class ChannelSession {
                 bot.reply(message, reply.toString());
 
                 logEntries.attach(new RollLogEntry(message.content(), message.author().username(), player.getCurrentCharacter().getName(),
-                        message.timestamp(), args[1], "1d100", String.valueOf(result), "惩罚骰" + mod));
+                        message.timestamp(), attrName, "1d100", String.valueOf(result), "惩罚骰" + mod));
             }
             case ".rcp" -> {
                 if (args.length != 2) {
@@ -453,14 +460,14 @@ public class ChannelSession {
                 }
 
                 final PlayerCharacter pc = player.getCurrentCharacter();
-
-                if (!pc.getAttr().containsKey(args[1])) {
-                    bot.reply(message, MessageBuilder.newInstance().at(message.author().id()).append(" 找不到属性").append(args[1]).append("~").build());
+                final String attrName = PlayerCharacter.getStandardName(args[1]);
+                if (!pc.getAttr().containsKey(attrName)) {
+                    bot.reply(message, MessageBuilder.newInstance().at(message.author().id()).append(" 找不到属性").append(attrName).append("~").build());
                     return;
                 }
 
                 final StringBuilder reply = new StringBuilder();
-                reply.append(pc.getName()).append("投掷").append(args[1]).append("1d100=");
+                reply.append(pc.getName()).append(" 投掷 ").append(attrName).append(" 1d100=");
 
                 int xt = new Dice().roll(DiceExpr.TEN).total();
                 int at = (new Dice().roll(DiceExpr.TEN).total() - 1) * 10;
@@ -482,7 +489,7 @@ public class ChannelSession {
                 }
 
                 final int result = Math.max(a, b);
-                final double value = pc.getAttr().get(args[1]);
+                final double value = pc.getAttr().get(attrName);
 
                 final StringBuilder mod = new StringBuilder();
                 mod.append("[").append(a).append(",").append(b).append("]");
@@ -514,7 +521,7 @@ public class ChannelSession {
                 bot.reply(message, reply.toString());
 
                 logEntries.attach(new RollLogEntry(message.content(), message.author().username(), player.getCurrentCharacter().getName(),
-                        message.timestamp(), args[1], "1d100", String.valueOf(result), "惩罚骰" + mod));
+                        message.timestamp(), attrName, "1d100", String.valueOf(result), "惩罚骰" + mod));
             }
             case ".rcb" -> {
                 if (args.length != 2) {
@@ -530,14 +537,14 @@ public class ChannelSession {
                 }
 
                 final PlayerCharacter pc = player.getCurrentCharacter();
-
-                if (!pc.getAttr().containsKey(args[1])) {
-                    bot.reply(message, MessageBuilder.newInstance().at(message.author().id()).append(" 找不到属性").append(args[1]).append("~").build());
+                final String attrName = PlayerCharacter.getStandardName(args[1]);
+                if (!pc.getAttr().containsKey(attrName)) {
+                    bot.reply(message, MessageBuilder.newInstance().at(message.author().id()).append(" 找不到属性").append(attrName).append("~").build());
                     return;
                 }
 
                 final StringBuilder reply = new StringBuilder();
-                reply.append(pc.getName()).append("投掷").append(args[1]).append("1d100=");
+                reply.append(pc.getName()).append(" 投掷 ").append(attrName).append(" 1d100=");
 
                 int xt = new Dice().roll(DiceExpr.TEN).total();
                 int at = (new Dice().roll(DiceExpr.TEN).total() - 1) * 10;
@@ -559,7 +566,7 @@ public class ChannelSession {
                 }
 
                 final int result = Math.min(a, b);
-                final double value = pc.getAttr().get(args[1]);
+                final double value = pc.getAttr().get(attrName);
 
                 final StringBuilder mod = new StringBuilder();
                 mod.append("[").append(a).append(",").append(b).append("]");
@@ -590,7 +597,7 @@ public class ChannelSession {
 
                 bot.reply(message, reply.toString());
                 logEntries.attach(new RollLogEntry(message.content(), message.author().username(), player.getCurrentCharacter().getName(),
-                        message.timestamp(), args[1], "1d100", String.valueOf(result), "奖励骰" + mod));
+                        message.timestamp(), attrName, "1d100", String.valueOf(result), "奖励骰" + mod));
 
             }
             case ".rcbb" -> {
@@ -607,14 +614,14 @@ public class ChannelSession {
                 }
 
                 final PlayerCharacter pc = player.getCurrentCharacter();
-
-                if (!pc.getAttr().containsKey(args[1])) {
-                    bot.reply(message, MessageBuilder.newInstance().at(message.author().id()).append(" 找不到属性").append(args[1]).append("~").build());
+                final String attrName = PlayerCharacter.getStandardName(args[1]);
+                if (!pc.getAttr().containsKey(attrName)) {
+                    bot.reply(message, MessageBuilder.newInstance().at(message.author().id()).append(" 找不到属性").append(attrName).append("~").build());
                     return;
                 }
 
                 final StringBuilder reply = new StringBuilder();
-                reply.append(pc.getName()).append("投掷").append(args[1]).append("1d100=");
+                reply.append(pc.getName()).append(" 投掷 ").append(attrName).append(" 1d100=");
 
                 int xt = new Dice().roll(DiceExpr.TEN).total();
                 int at = (new Dice().roll(DiceExpr.TEN).total() - 1) * 10;
@@ -644,7 +651,7 @@ public class ChannelSession {
                 }
 
                 final int result = Math.min(a, Math.min(b, c));
-                final double value = pc.getAttr().get(args[1]);
+                final double value = pc.getAttr().get(attrName);
 
                 String mod = "[" + a + "," + b + "," + c + "]";
 
@@ -674,8 +681,63 @@ public class ChannelSession {
 
                 bot.reply(message, reply.toString());
                 logEntries.attach(new RollLogEntry(message.content(), message.author().username(), player.getCurrentCharacter().getName(),
-                        message.timestamp(), args[1], "1d100", String.valueOf(result), "奖励骰" + mod));
+                        message.timestamp(), attrName, "1d100", String.valueOf(result), "奖励骰" + mod));
 
+            }
+            case ".sc" -> {
+                if(args.length != 2 || args[1].split("/").length != 2) {
+                    bot.reply(message, MessageBuilder.newInstance().at(message.author().id()).append(" 指令参数错误~").build());
+                    return;
+                }
+
+                final DiceExpr success = DiceExpr.parse(args[1].split("/")[0]);
+                final DiceExpr fail = DiceExpr.parse(args[1].split("/")[1]);
+
+                final Player player = players.get(message.author().id());
+
+                if (player == null || player.getCurrentCharacter() == null) {
+                    bot.reply(message, MessageBuilder.newInstance().at(message.author().id()).append(" 未选择角色~").build());
+                    return;
+                }
+
+                final StringBuilder reply = new StringBuilder();
+                final PlayerCharacter pc = player.getCurrentCharacter();
+
+                reply.append(pc.getName()).append(" 进行理智检定 1d100=");
+
+                int san = pc.getAttr().get(PlayerCharacter.getStandardName("理智"));
+                final int roll = new Random().nextInt(100) + 1;
+
+                reply.append(roll).append("/").append(san).append(" ");
+
+                final int total;
+                final String str;
+                if(roll <= san) {
+                    reply.append("成功！");
+                    total = new Dice().roll(success).total();
+                    str = success.toString();
+                } else {
+                    reply.append("失败！");
+                    total = new Dice().roll(fail).total();
+                    str = fail.toString();
+                }
+                san -= total;
+                reply.append("损失 ").append(str).append("=").append(total).append(" 点理智。当前理智为 ").append(san).append(" 。");
+
+                if(pc.getAttr().containsKey(PlayerCharacter.getStandardName("理智"))) {
+                    pc.getAttr().put(PlayerCharacter.getStandardName("理智"), san);
+                }
+
+                if(san <= 0) {
+                    reply.append("陷入永久性疯狂！");
+                } else if(total > 5) {
+                    reply.append("陷入不定性疯狂！");
+                }
+
+                bot.reply(message, reply.toString());
+
+                logEntries.attach(new RollLogEntry(message.content(), message.author().username(), player.getCurrentCharacter().getName(),
+                        message.timestamp(), "理智", "1d100", String.valueOf(roll), null));
             }
         }
     }

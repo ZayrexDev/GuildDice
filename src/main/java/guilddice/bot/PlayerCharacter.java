@@ -1,7 +1,7 @@
 package guilddice.bot;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONObject;
+import com.alibaba.fastjson2.JSONArray;
+import guilddice.Main;
 import lombok.Data;
 
 import java.util.LinkedHashMap;
@@ -16,11 +16,24 @@ public class PlayerCharacter {
         this.name = name;
         this.attr = new LinkedHashMap<>();
 
-        final JSONObject object = JSON.parseObject(this.getClass().getResource("/default.json"));
-        if (object != null) {
-            for (Map.Entry<String, Object> stringObjectEntry : object.entrySet()) {
+        if (Main.DEFAULT_ATTR != null) {
+            for (Map.Entry<String, Object> stringObjectEntry : Main.DEFAULT_ATTR.entrySet()) {
                 attr.put(stringObjectEntry.getKey(), (Integer) stringObjectEntry.getValue());
             }
         }
+    }
+
+    public static String getStandardName(String orig) {
+        for (Map.Entry<String, Object> stringObjectEntry : Main.AKA_ATTR.entrySet()) {
+            if (stringObjectEntry.getKey().equals(orig)) {
+                return stringObjectEntry.getKey();
+            }
+            final JSONArray value = (JSONArray) stringObjectEntry.getValue();
+            if (value.contains(orig)) {
+                return stringObjectEntry.getKey();
+            }
+        }
+
+        return orig;
     }
 }

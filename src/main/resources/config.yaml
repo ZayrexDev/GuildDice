@@ -1,0 +1,15 @@
+# GuildDice 配置文件
+
+# 开发者参数设定
+appId: appIdHere
+appSecret: appSecretHere
+
+# 所在的频道ID
+guildId: 114514
+
+# KP所持有的身份组的ID
+# 注：频道主身份组的ID一般为 4
+kpRoleId: 114514
+
+# PL所持有的身份组的ID
+plRoleId: 114514

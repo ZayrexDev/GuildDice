@@ -36,3 +36,5 @@ build/
 /log
 /.idea/
 /dice-logs-temp/
+/config
+/config/

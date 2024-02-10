@@ -15,9 +15,9 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 public class Bot {
-    private final HashMap<String, ChannelSession> sessions = new HashMap<>();
     protected static final Logger LOG = LogManager.getLogger(Bot.class);
     public final Timer accessTokenRefreshTimer = new Timer();
+    private final HashMap<String, ChannelSession> sessions = new HashMap<>();
     private final String appID;
     private final String appSecret;
     @Getter
@@ -42,6 +42,7 @@ public class Bot {
             new Thread(() -> {
                 try {
                     Thread.sleep(5 * 1000);
+                    if (wsClient.isOpen()) wsClient.closeBlocking();
                 } catch (InterruptedException ignored) {
                 }
                 wsClient.reconnect();
@@ -116,7 +117,7 @@ public class Bot {
 
     public void onMessage(JSONObject d, boolean b) {
         final String channelId = d.getString("channel_id");
-        if(!sessions.containsKey(channelId)) {
+        if (!sessions.containsKey(channelId)) {
             sessions.put(channelId, new ChannelSession(this, channelId));
         }
         sessions.get(channelId).handleMessage(d.to(Message.class));
