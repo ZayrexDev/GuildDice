@@ -14,7 +14,7 @@ import java.net.URI;
 import java.util.Objects;
 
 public class WSClient extends WebSocketClient {
-    protected static final Logger LOG = LogManager.getLogger();
+    protected static final Logger LOG = LogManager.getLogger(WSClient.class);
     protected int lastS = 0;
     private HeartBeatThread heartBeatThread;
 

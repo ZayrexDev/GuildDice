@@ -33,7 +33,7 @@ public class ChannelSession {
     private final String channelId;
     private final Log logEntries;
     private final LinkedHashMap<String, Player> players = new LinkedHashMap<>();
-    private final Logger LOG = LogManager.getLogger();
+    private final Logger LOG = LogManager.getLogger(ChannelSession.class);
     private boolean on = false;
 
     public ChannelSession(Bot bot, String channelId) {

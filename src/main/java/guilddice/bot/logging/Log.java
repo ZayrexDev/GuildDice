@@ -14,7 +14,7 @@ import java.util.Date;
 import java.util.LinkedList;
 
 public class Log {
-    private static final Logger LOG = LogManager.getLogger();
+    private static final Logger LOG = LogManager.getLogger(Log.class);
     private static final Path LOG_TEMP_ROOT = Path.of("dice-logs-temp");
     private final LinkedList<JSONObject> log = new LinkedList<>();
     private Path tempPath;

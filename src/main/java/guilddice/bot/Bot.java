@@ -16,7 +16,7 @@ import java.util.TimerTask;
 
 public class Bot {
     private final HashMap<String, ChannelSession> sessions = new HashMap<>();
-    protected static final Logger LOG = LogManager.getLogger();
+    protected static final Logger LOG = LogManager.getLogger(Bot.class);
     public final Timer accessTokenRefreshTimer = new Timer();
     private final String appID;
     private final String appSecret;
