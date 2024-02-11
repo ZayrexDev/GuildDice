@@ -1,8 +1,8 @@
 package guilddice.bot;
 
 import com.alibaba.fastjson2.JSONObject;
-import guilddice.bot.api.msg.Message;
-import guilddice.bot.network.WSClient;
+import guilddice.bot.api.qq.msg.Message;
+import guilddice.bot.api.qq.network.WSClient;
 import lombok.Getter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -30,6 +30,11 @@ public class Bot {
     }
 
     public void connect() {
+        LOG.info("即将在5秒后连接...");
+        try {
+            Thread.sleep(5 * 1000);
+        } catch (InterruptedException ignored) {
+        }
         LOG.info("正在获取 AccessToken ...");
         refreshAccessToken();
 
@@ -38,7 +43,6 @@ public class Bot {
             wsClient = new WSClient(this);
             wsClient.connect();
         } else {
-            LOG.warn("即将在5秒后重连...");
             new Thread(() -> {
                 try {
                     Thread.sleep(5 * 1000);

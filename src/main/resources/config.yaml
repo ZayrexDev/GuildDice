@@ -4,9 +4,6 @@
 appId: appIdHere
 appSecret: appSecretHere
 
-# 骰主的ID
-masterId: 1919810
-
 # 所在的频道ID
 guildId: 114514
 

@@ -1,4 +1,4 @@
-package guilddice.bot.api;
+package guilddice.bot.api.qq;
 
 public class OPCode {
     public static final int DISPATCH = 0;

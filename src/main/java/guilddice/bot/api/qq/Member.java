@@ -1,4 +1,4 @@
-package guilddice.bot.api;
+package guilddice.bot.api.qq;
 
 import java.util.Arrays;
 

@@ -1,7 +1,7 @@
-package guilddice.bot.api.msg;
+package guilddice.bot.api.qq.msg;
 
-import guilddice.bot.api.Member;
-import guilddice.bot.api.User;
+import guilddice.bot.api.qq.Member;
+import guilddice.bot.api.qq.User;
 
 public record Message(String id, String channel_id, String guild_id, String content, String timestamp,
                       String edited_timestamp, boolean mention_everyone, User author, MessageAttachment attachments,

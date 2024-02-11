@@ -1,4 +1,4 @@
-package guilddice.bot.api.msg;
+package guilddice.bot.api.qq.msg;
 
 public record MessageEmbedField(String name) {
 }

@@ -1,4 +1,4 @@
-package guilddice.bot.api;
+package guilddice.bot.api.qq;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.alibaba.fastjson2.JSONWriter;

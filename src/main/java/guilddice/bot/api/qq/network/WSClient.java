@@ -1,10 +1,10 @@
-package guilddice.bot.network;
+package guilddice.bot.api.qq.network;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import guilddice.bot.Bot;
-import guilddice.bot.api.OPCode;
-import guilddice.bot.api.Payload;
+import guilddice.bot.api.qq.OPCode;
+import guilddice.bot.api.qq.Payload;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.java_websocket.client.WebSocketClient;
@@ -25,7 +25,7 @@ public class WSClient extends WebSocketClient {
 
     @Override
     public void onOpen(ServerHandshake serverHandshake) {
-        LOG.info("已连接:{}", serverHandshake);
+        LOG.info("已连接:{}", serverHandshake.getHttpStatus());
     }
 
     public void setHeartbeatInterval(int interval) {
@@ -46,14 +46,15 @@ public class WSClient extends WebSocketClient {
     private String session_id = null;
 
     void sendPayload(Payload p) {
-        send(p.toJSONObject().toString());
+        final String string = p.toJSONObject().toString();
+        send(string);
     }
 
     private JSONObject buildAuthObject() {
         final JSONObject object = new JSONObject();
         object.put("token", bot.getAccessToken());
         object.put("intents", 1 << 9 | 1 << 30);
-        object.put("shards", new JSONArray(0, 0));
+        object.put("shards", new JSONArray(0, 1));
         return object;
     }
 
@@ -64,8 +65,10 @@ public class WSClient extends WebSocketClient {
 
         if (object.getInteger("op") == OPCode.HELLO) {
             if (session_id != null) {
+                LOG.info("正在发送恢复信息...");
                 sendPayload(new Payload(OPCode.RESUME, buildReconnectObject()));
             } else {
+                LOG.info("正在发送鉴权信息...");
                 sendPayload(new Payload(OPCode.IDENTIFY, buildAuthObject()));
             }
             setHeartbeatInterval(object.getJSONObject("d").getInteger("heartbeat_interval"));

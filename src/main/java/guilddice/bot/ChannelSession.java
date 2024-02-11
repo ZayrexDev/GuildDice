@@ -2,7 +2,8 @@ package guilddice.bot;
 
 import com.alibaba.fastjson2.JSONObject;
 import guilddice.Main;
-import guilddice.bot.api.msg.Message;
+import guilddice.bot.api.qq.msg.Message;
+import guilddice.bot.logging.CheckLogEntry;
 import guilddice.bot.logging.Log;
 import guilddice.bot.logging.MsgLogEntry;
 import guilddice.bot.logging.RollLogEntry;
@@ -85,19 +86,8 @@ public class ChannelSession {
         final String[] args = message.content().split(" ");
         if (args.length == 0) return;
 
-        if (args[0].equals(".inspect") && (message.member().hasRole(Main.getConfig().getKpRoleId()) || message.author().id().equals(Main.getConfig().getMasterId()))) {
+        if (args[0].equals(".inspect") && message.member().hasRole("4")) {
             bot.reply(message, JSONObject.from(message).toString());
-            return;
-        }
-        if (args[0].equals(".reload") && message.author().id().equals(Main.getConfig().getMasterId())) {
-            bot.reply(message, "重载配置中...");
-            try {
-                Main.loadConfig();
-                bot.reply(message, "配置重载成功~");
-            } catch (IOException e) {
-                bot.reply(message, "配置重载失败qwq");
-                LOG.error("无法重载配置文件", e);
-            }
             return;
         }
 
@@ -368,8 +358,8 @@ public class ChannelSession {
 
                 bot.reply(message, reply.toString());
 
-                logEntries.attach(new RollLogEntry(message.content(), message.author().username(), player.getCurrentCharacter().getName(),
-                        message.timestamp(), attrName, "1d100", String.valueOf(result), null));
+                logEntries.attach(new CheckLogEntry(message.content(), message.author().username(), player.getCurrentCharacter().getName(),
+                        message.timestamp(), (int) value, result, attrName, null));
             }
             case ".rcpp" -> {
                 if (args.length != 2) {
@@ -424,10 +414,9 @@ public class ChannelSession {
                 final int result = Math.max(a, Math.max(b, c));
                 final double value = pc.getAttr().get(attrName);
 
-                final StringBuilder mod = new StringBuilder();
-                mod.append("[").append(a)
-                        .append(",").append(b).append(",").append(c)
-                        .append("]");
+                String mod = "[" + a +
+                        "," + b + "," + c +
+                        "]";
                 reply.append(result).append("/").append((int) value).append(mod).append(",");
 
                 if (result == 1) {
@@ -454,8 +443,8 @@ public class ChannelSession {
 
                 bot.reply(message, reply.toString());
 
-                logEntries.attach(new RollLogEntry(message.content(), message.author().username(), player.getCurrentCharacter().getName(),
-                        message.timestamp(), attrName, "1d100", String.valueOf(result), "惩罚骰" + mod));
+                logEntries.attach(new CheckLogEntry(message.content(), message.author().username(), player.getCurrentCharacter().getName(),
+                        message.timestamp(), (int) value, result, attrName, "惩罚骰" + mod));
             }
             case ".rcp" -> {
                 if (args.length != 2) {
@@ -531,8 +520,8 @@ public class ChannelSession {
 
                 bot.reply(message, reply.toString());
 
-                logEntries.attach(new RollLogEntry(message.content(), message.author().username(), player.getCurrentCharacter().getName(),
-                        message.timestamp(), attrName, "1d100", String.valueOf(result), "惩罚骰" + mod));
+                logEntries.attach(new CheckLogEntry(message.content(), message.author().username(), player.getCurrentCharacter().getName(),
+                        message.timestamp(), (int) value, result, attrName, "惩罚骰" + mod));
             }
             case ".rcb" -> {
                 if (args.length != 2) {
@@ -607,8 +596,8 @@ public class ChannelSession {
                 }
 
                 bot.reply(message, reply.toString());
-                logEntries.attach(new RollLogEntry(message.content(), message.author().username(), player.getCurrentCharacter().getName(),
-                        message.timestamp(), attrName, "1d100", String.valueOf(result), "奖励骰" + mod));
+                logEntries.attach(new CheckLogEntry(message.content(), message.author().username(), player.getCurrentCharacter().getName(),
+                        message.timestamp(), (int) value, result, attrName, "奖励骰" + mod));
 
             }
             case ".rcbb" -> {
@@ -691,12 +680,11 @@ public class ChannelSession {
                 }
 
                 bot.reply(message, reply.toString());
-                logEntries.attach(new RollLogEntry(message.content(), message.author().username(), player.getCurrentCharacter().getName(),
-                        message.timestamp(), attrName, "1d100", String.valueOf(result), "奖励骰" + mod));
-
+                logEntries.attach(new CheckLogEntry(message.content(), message.author().username(), player.getCurrentCharacter().getName(),
+                        message.timestamp(), (int) value, result, attrName, "奖励骰" + mod));
             }
             case ".sc" -> {
-                if (args.length != 2 || args[1].split("/").length != 2) {
+                if(args.length != 2 || args[1].split("/").length != 2) {
                     bot.reply(message, MessageBuilder.newInstance().at(message.author().id()).append(" 指令参数错误~").build());
                     return;
                 }
@@ -717,13 +705,14 @@ public class ChannelSession {
                 reply.append(pc.getName()).append(" 进行理智检定 1d100=");
 
                 int san = pc.getAttr().get(PlayerCharacter.getStandardName("理智"));
+                final int origSan = san;
                 final int roll = new Random().nextInt(100) + 1;
 
                 reply.append(roll).append("/").append(san).append(" ");
 
                 final int total;
                 final String str;
-                if (roll <= san) {
+                if(roll <= san) {
                     reply.append("成功！");
                     total = new Dice().roll(success).total();
                     str = success.toString();
@@ -735,20 +724,23 @@ public class ChannelSession {
                 san -= total;
                 reply.append("损失 ").append(str).append("=").append(total).append(" 点理智。当前理智为 ").append(san).append(" 。");
 
-                if (pc.getAttr().containsKey(PlayerCharacter.getStandardName("理智"))) {
+                if(pc.getAttr().containsKey(PlayerCharacter.getStandardName("理智"))) {
                     pc.getAttr().put(PlayerCharacter.getStandardName("理智"), san);
                 }
 
-                if (san <= 0) {
+                if(san <= 0) {
                     reply.append("陷入永久性疯狂！");
-                } else if (total > 5) {
+                } else if(total > 5) {
                     reply.append("陷入不定性疯狂！");
                 }
 
                 bot.reply(message, reply.toString());
 
+                logEntries.attach(new CheckLogEntry(message.content(), message.author().username(), player.getCurrentCharacter().getName(),
+                        message.timestamp(), origSan, roll, "理智", null));
+
                 logEntries.attach(new RollLogEntry(message.content(), message.author().username(), player.getCurrentCharacter().getName(),
-                        message.timestamp(), "理智", "1d100", String.valueOf(roll), null));
+                        message.timestamp(), "损失理智", str, String.valueOf(total), null));
             }
         }
     }
