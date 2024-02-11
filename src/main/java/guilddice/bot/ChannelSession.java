@@ -85,8 +85,19 @@ public class ChannelSession {
         final String[] args = message.content().split(" ");
         if (args.length == 0) return;
 
-        if (args[0].equals(".inspect") && message.member().hasRole("4")) {
+        if (args[0].equals(".inspect") && (message.member().hasRole(Main.getConfig().getKpRoleId()) || message.author().id().equals(Main.getConfig().getMasterId()))) {
             bot.reply(message, JSONObject.from(message).toString());
+            return;
+        }
+        if (args[0].equals(".reload") && message.author().id().equals(Main.getConfig().getMasterId())) {
+            bot.reply(message, "重载配置中...");
+            try {
+                Main.loadConfig();
+                bot.reply(message, "配置重载成功~");
+            } catch (IOException e) {
+                bot.reply(message, "配置重载失败qwq");
+                LOG.error("无法重载配置文件", e);
+            }
             return;
         }
 
@@ -685,7 +696,7 @@ public class ChannelSession {
 
             }
             case ".sc" -> {
-                if(args.length != 2 || args[1].split("/").length != 2) {
+                if (args.length != 2 || args[1].split("/").length != 2) {
                     bot.reply(message, MessageBuilder.newInstance().at(message.author().id()).append(" 指令参数错误~").build());
                     return;
                 }
@@ -712,7 +723,7 @@ public class ChannelSession {
 
                 final int total;
                 final String str;
-                if(roll <= san) {
+                if (roll <= san) {
                     reply.append("成功！");
                     total = new Dice().roll(success).total();
                     str = success.toString();
@@ -724,13 +735,13 @@ public class ChannelSession {
                 san -= total;
                 reply.append("损失 ").append(str).append("=").append(total).append(" 点理智。当前理智为 ").append(san).append(" 。");
 
-                if(pc.getAttr().containsKey(PlayerCharacter.getStandardName("理智"))) {
+                if (pc.getAttr().containsKey(PlayerCharacter.getStandardName("理智"))) {
                     pc.getAttr().put(PlayerCharacter.getStandardName("理智"), san);
                 }
 
-                if(san <= 0) {
+                if (san <= 0) {
                     reply.append("陷入永久性疯狂！");
-                } else if(total > 5) {
+                } else if (total > 5) {
                     reply.append("陷入不定性疯狂！");
                 }
 

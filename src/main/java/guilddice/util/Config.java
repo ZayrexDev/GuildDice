@@ -9,4 +9,5 @@ public class Config {
     private String plRoleId;
     private String appId;
     private String appSecret;
+    private String masterId;
 }
