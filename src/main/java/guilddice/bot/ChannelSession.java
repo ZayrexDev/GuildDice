@@ -137,14 +137,7 @@ public class ChannelSession {
                 }
             }
             case ".pc" -> {
-                try {
-                    final Player load = Player.load(universalID);
-                    if (load != null) {
-                        players.put(universalID, load);
-                    }
-                } catch (IOException e) {
-                    LOG.warn("读取玩家信息失败", e);
-                }
+                reloadPlayer(universalID);
                 players.putIfAbsent(universalID, new Player(universalID, message.getAuthor().getUsername()));
 
                 final Player player = players.get(universalID);
@@ -282,8 +275,8 @@ public class ChannelSession {
                                     if (!curPC.getAttr().containsKey(standardName)) {
                                         reply.append(standardName).append("更改失败：找不到属性").append("\n");
                                     } else {
-                                        curPC.getAttr().put(standardName, curPC.getAttr().get(args[i]) + Integer.parseInt(args[i + 1]));
-                                        reply.append(standardName).append("成功更改为：").append(curPC.getAttr().get(args[i])).append("\n");
+                                        curPC.getAttr().put(standardName, curPC.getAttr().get(standardName) + Integer.parseInt(args[i + 1]));
+                                        reply.append(standardName).append("成功更改为：").append(curPC.getAttr().get(standardName)).append("\n");
                                     }
                                 }
                             }
@@ -316,6 +309,7 @@ public class ChannelSession {
                 final DiceExpr diceExpr = DiceExpr.parse(args[1]);
                 final DiceResult result = new Dice().roll(diceExpr);
 
+                reloadPlayer(universalID);
                 final Player player = players.get(universalID);
 
                 if (player != null && player.getCurrentCharacter() != null) {
@@ -343,6 +337,7 @@ public class ChannelSession {
                     return;
                 }
 
+                reloadPlayer(universalID);
                 final Player player = players.get(universalID);
 
                 if (player == null || player.getCurrentCharacter() == null) {
@@ -399,6 +394,7 @@ public class ChannelSession {
                     return;
                 }
 
+                reloadPlayer(universalID);
                 final Player player = players.get(universalID);
 
                 if (player == null || player.getCurrentCharacter() == null) {
@@ -484,6 +480,7 @@ public class ChannelSession {
                     return;
                 }
 
+                reloadPlayer(universalID);
                 final Player player = players.get(universalID);
 
                 if (player == null || player.getCurrentCharacter() == null) {
@@ -562,6 +559,7 @@ public class ChannelSession {
                     return;
                 }
 
+                reloadPlayer(universalID);
                 final Player player = players.get(universalID);
 
                 if (player == null || player.getCurrentCharacter() == null) {
@@ -640,6 +638,7 @@ public class ChannelSession {
                     return;
                 }
 
+                reloadPlayer(universalID);
                 final Player player = players.get(universalID);
 
                 if (player == null || player.getCurrentCharacter() == null) {
@@ -783,6 +782,17 @@ public class ChannelSession {
                 logEntries.attach(new RollLogEntry(message.getContent(), message.getAuthor().getUsername(), player.getCurrentCharacter().getName(),
                         message.getTimestamp(), "损失理智", str, String.valueOf(total), null));
             }
+        }
+    }
+
+    private void reloadPlayer(UUID universalID) {
+        try {
+            final Player load = Player.load(universalID);
+            if (load != null) {
+                players.put(universalID, load);
+            }
+        } catch (IOException e) {
+            LOG.warn("读取玩家信息失败", e);
         }
     }
 }

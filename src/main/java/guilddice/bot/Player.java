@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Getter
@@ -41,7 +42,12 @@ public class Player {
 
         final JSONObject obj = JSONObject.parse(Files.readString(plPath));
 
-        return new Player(id, obj.getString("name"), obj.getList("pc", PlayerCharacter.class));
+        final Player player = new Player(id, obj.getString("name"), obj.getList("pc", PlayerCharacter.class));
+        final String selectedStr = obj.getString("selected");
+        if(selectedStr != null) {
+            player.getCharacters().stream().filter(e -> Objects.equals(e.getName(), selectedStr)).findAny().ifPresent(player::setCurrentCharacter);
+        }
+        return player;
     }
 
     public void save() throws IOException {
