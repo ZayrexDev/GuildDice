@@ -2,9 +2,9 @@ package guilddice.bot.api.qq.network;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
-import guilddice.bot.Bot;
 import guilddice.bot.api.qq.OPCode;
 import guilddice.bot.api.qq.Payload;
+import guilddice.bot.api.qq.QQBot;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.java_websocket.client.WebSocketClient;
@@ -18,7 +18,7 @@ public class WSClient extends WebSocketClient {
     protected int lastS = 0;
     private HeartBeatThread heartBeatThread;
 
-    public WSClient(Bot bot) {
+    public WSClient(QQBot bot) {
         super(URI.create("wss://api.sgroup.qq.com/websocket/"));
         this.bot = bot;
     }
@@ -41,7 +41,7 @@ public class WSClient extends WebSocketClient {
         object.put("seq", lastS);
         return object;
     }
-    final Bot bot;
+    final QQBot bot;
 
     private String session_id = null;
 

@@ -2,6 +2,7 @@ package guilddice.bot.logging;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import guilddice.Main;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -13,18 +14,20 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedList;
 
+import static guilddice.Main.LOG_ROOT;
+
 public class Log {
     private static final Logger LOG = LogManager.getLogger(Log.class);
-    private static final Path LOG_TEMP_ROOT = Path.of("dice-logs-temp");
+
     private final LinkedList<JSONObject> log = new LinkedList<>();
     private Path tempPath;
 
     public Log(String channelId) {
         try {
-            Files.createDirectories(LOG_TEMP_ROOT);
+            Files.createDirectories(Main.LOG_TEMP_ROOT);
             final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy.MM.dd.HH_mm_ss");
             final String format = simpleDateFormat.format(new Date());
-            this.tempPath = LOG_TEMP_ROOT.resolve(channelId + "-tmp-" + format + ".dlog");
+            this.tempPath = Main.LOG_TEMP_ROOT.resolve(channelId + "-tmp-" + format + ".dlog");
             if (!Files.exists(this.tempPath)) {
                 Files.createFile(this.tempPath);
             }
@@ -60,9 +63,10 @@ public class Log {
         }
     }
 
-    public void save(Path path) throws IOException {
+    public void save(String name) throws IOException {
+        if(!Files.exists(LOG_ROOT)) Files.createDirectories(LOG_ROOT);
         JSONArray arr = new JSONArray();
         arr.addAll(log);
-        Files.writeString(path, arr.toString());
+        Files.writeString(LOG_ROOT.resolve(name), arr.toString());
     }
 }

@@ -1,7 +1,10 @@
-package guilddice.bot;
+package guilddice.bot.api.qq;
 
 import com.alibaba.fastjson2.JSONObject;
-import guilddice.bot.api.qq.msg.Message;
+import guilddice.bot.ChannelSession;
+import guilddice.bot.api.universal.Bot;
+import guilddice.bot.api.universal.Message;
+import guilddice.bot.api.qq.msg.QQMessage;
 import guilddice.bot.api.qq.network.WSClient;
 import lombok.Getter;
 import org.apache.logging.log4j.LogManager;
@@ -14,17 +17,15 @@ import java.util.HashMap;
 import java.util.Timer;
 import java.util.TimerTask;
 
-public class Bot {
-    protected static final Logger LOG = LogManager.getLogger(Bot.class);
+public class QQBot extends Bot {
+    protected static final Logger LOG = LogManager.getLogger(QQBot.class);
     public final Timer accessTokenRefreshTimer = new Timer();
-    private final HashMap<String, ChannelSession> sessions = new HashMap<>();
     private final String appID;
     private final String appSecret;
     @Getter
     private String accessToken = null;
-    private WSClient wsClient;
-
-    public Bot(String appID, String appSecret) {
+    private WSClient wsClient = null;
+    public QQBot(String appID, String appSecret) {
         this.appID = appID;
         this.appSecret = appSecret;
     }
@@ -95,13 +96,24 @@ public class Bot {
     private String buildString(String endpoint) {
         return "https://api.sgroup.qq.com" + endpoint;
     }
+    private final HashMap<String, ChannelSession> sessions = new HashMap<>();
 
-    public void sendMessage(String content, String msgId, String channelId) {
+    public void onMessage(JSONObject d, boolean b) {
+        final String channelId = d.getString("channel_id");
+        if (!sessions.containsKey(channelId)) {
+            sessions.put(channelId, new ChannelSession(this, channelId));
+        }
+        sessions.get(channelId).handleMessage(d.to(QQMessage.class));
+    }
+
+    @Override
+    public void sendMessage(Message message, String content) {
+        final QQMessage msg = (QQMessage) message;
         try {
             final JSONObject args = new JSONObject();
             args.put("content", content);
-            args.put("msg_id", msgId);
-            Jsoup.connect(buildString("/channels/" + channelId + "/messages"))
+            args.put("msg_id", msg.id());
+            Jsoup.connect(buildString("/channels/" + msg.channel_id() + "/messages"))
                     .method(Connection.Method.POST)
                     .header("Authorization", accessToken)
                     .header("X-Union-Appid", appID)
@@ -113,17 +125,5 @@ public class Bot {
         } catch (IOException e) {
             LOG.error("发送消息失败！", e);
         }
-    }
-
-    public void reply(Message message, String content) {
-        sendMessage(content, message.id(), message.channel_id());
-    }
-
-    public void onMessage(JSONObject d, boolean b) {
-        final String channelId = d.getString("channel_id");
-        if (!sessions.containsKey(channelId)) {
-            sessions.put(channelId, new ChannelSession(this, channelId));
-        }
-        sessions.get(channelId).handleMessage(d.to(Message.class));
     }
 }

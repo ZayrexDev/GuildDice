@@ -22,7 +22,7 @@ public class RollLogEntry extends LogEntry {
     public String toString(OutputType type) {
         if (type.equals(OutputType.HuoZi)) {
             final StringBuilder s = new StringBuilder();
-            s.append("【投掷】(").append(senderNick).append(" ").append(reason).append(")");
+            s.append("【骰子】(").append(senderNick).append(" ").append(reason).append(")");
             if (outcome != null && !outcome.isEmpty()) s.append("[").append(outcome).append("]");
             s.append(diceExpr).append("=").append(result);
             return s.toString();

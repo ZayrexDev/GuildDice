@@ -1,8 +1,9 @@
 package guilddice;
 
 import com.alibaba.fastjson2.JSONObject;
-import guilddice.bot.Bot;
+import guilddice.bot.api.qq.QQBot;
 import guilddice.util.Config;
+import guilddice.util.Storage;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.IOException;
@@ -12,10 +13,14 @@ import java.nio.file.Path;
 import java.util.Objects;
 
 public class Main {
-    private final static Path CONFIG_ROOT = Path.of("config");
-    private final static Path CONFIG_PATH = CONFIG_ROOT.resolve("config.yaml");
-    private final static Path DEFAULT_ATTR_PATH = CONFIG_ROOT.resolve("default.json");
-    private final static Path AKA_ATTR_PATH = CONFIG_ROOT.resolve("aka.json");
+    public final static Path DATA_ROOT = Path.of("data");
+    public final static Path CONFIG_ROOT = DATA_ROOT.resolve("config");
+    public final static Path CONFIG_PATH = CONFIG_ROOT.resolve("config.yaml");
+    public final static Path DEFAULT_ATTR_PATH = CONFIG_ROOT.resolve("default.json");
+    public final static Path AKA_ATTR_PATH = CONFIG_ROOT.resolve("aka.json");
+    public static final Path PC_ROOT = Main.DATA_ROOT.resolve("pc");
+    public static final Path LOG_TEMP_ROOT = Main.DATA_ROOT.resolve("dice-logs-temp");
+    public static final Path LOG_ROOT = Main.DATA_ROOT.resolve("logs");
     public static Config CONFIG = new Config();
     public static JSONObject DEFAULT_ATTR;
     public static JSONObject AKA_ATTR;
@@ -44,7 +49,7 @@ public class Main {
             }
         }
 
-        Bot bot = new Bot(CONFIG.getAppId(), CONFIG.getAppSecret());
+        QQBot bot = new QQBot(CONFIG.getAppId(), CONFIG.getAppSecret());
         bot.connect();
     }
 
@@ -65,9 +70,10 @@ public class Main {
 
         if (Files.exists(AKA_ATTR_PATH)) {
             AKA_ATTR = JSONObject.parseObject(Files.readString(AKA_ATTR_PATH));
-
         } else {
             AKA_ATTR = new JSONObject();
         }
+
+        Storage.load();
     }
 }

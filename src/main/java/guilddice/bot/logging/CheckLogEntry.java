@@ -21,7 +21,7 @@ public class CheckLogEntry extends LogEntry {
     @Override
     public String toString(OutputType type) {
         if (type.equals(OutputType.HuoZi)) {
-            return "【投掷】(" + senderNick + " " + reason + ")1d100=" + result + "/" + require;
+            return "【骰子】(" + senderNick + " " + reason + ")1d100=" + result + "/" + require;
         }
 
         return senderNick + " " + timestamp + "\n" +
