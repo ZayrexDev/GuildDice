@@ -2,8 +2,11 @@ package guilddice;
 
 import com.alibaba.fastjson2.JSONObject;
 import guilddice.bot.api.qq.QQBot;
+import guilddice.bot.api.universal.Bot;
 import guilddice.util.Config;
 import guilddice.util.Storage;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.IOException;
@@ -20,36 +23,36 @@ public class Main {
     public final static Path AKA_ATTR_PATH = CONFIG_ROOT.resolve("aka.json");
     public static final Path PC_ROOT = Main.DATA_ROOT.resolve("pc");
     public static final Path LOG_TEMP_ROOT = Main.DATA_ROOT.resolve("dice-logs-temp");
-    public static final Path LOG_ROOT = Main.DATA_ROOT.resolve("logs");
+    public static final Path LOG_ROOT = Main.DATA_ROOT.resolve("dice-logs");
     public static Config CONFIG = new Config();
     public static JSONObject DEFAULT_ATTR;
     public static JSONObject AKA_ATTR;
+    public static final Logger LOG = LogManager.getLogger(Main.class);
 
     public static void main(String[] args) {
         if (!Files.exists(CONFIG_ROOT)) {
-            System.out.println("未找到配置文件。");
+            LOG.warn("未找到配置文件。");
             try {
                 Files.createDirectories(CONFIG_ROOT);
                 Files.copy(Objects.requireNonNull(Main.class.getResourceAsStream("/config.yaml")), CONFIG_PATH);
                 Files.copy(Objects.requireNonNull(Main.class.getResourceAsStream("/aka.json")), AKA_ATTR_PATH);
                 Files.copy(Objects.requireNonNull(Main.class.getResourceAsStream("/default.json")), DEFAULT_ATTR_PATH);
-                System.out.println("已创建默认配置文件。请填写相关配置再允许程序~");
+                LOG.info("已创建默认配置文件。请填写相关配置再允许程序~");
             } catch (IOException e) {
-                System.err.println("无法创建默认配置文件！");
-                e.printStackTrace();
+                LOG.error("无法创建默认配置文件！", e);
             }
             return;
         } else {
             try {
                 loadConfig();
             } catch (IOException e) {
-                System.err.println("无法读取配置文件，程序即将退出...");
-                e.printStackTrace();
+                LOG.error("无法读取配置文件，程序即将退出...", e);
                 return;
             }
         }
 
-        QQBot bot = new QQBot(CONFIG.getAppId(), CONFIG.getAppSecret());
+        Bot bot = new QQBot(CONFIG.getAppId(), CONFIG.getAppSecret());
+
         bot.connect();
     }
 

@@ -2,8 +2,6 @@ package guilddice.bot.api.qq.network;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
-import guilddice.bot.api.qq.OPCode;
-import guilddice.bot.api.qq.Payload;
 import guilddice.bot.api.qq.QQBot;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -74,9 +72,9 @@ public class WSClient extends WebSocketClient {
             setHeartbeatInterval(object.getJSONObject("d").getInteger("heartbeat_interval"));
         } else if (object.getInteger("op") == OPCode.DISPATCH) {
             if (object.getString("t").equals("MESSAGE_CREATE")) {
-                bot.onMessage(object.getJSONObject("d"), false);
+                bot.onMessage(object.getJSONObject("d"));
             } else if (object.getString("t").equals("AT_MESSAGE_CREATE")) {
-                bot.onMessage(object.getJSONObject("d"), true);
+                bot.onMessage(object.getJSONObject("d"));
             } else if (object.getString("t").equals("READY")) {
                 session_id = object.getJSONObject("d").getString("session_id");
                 LOG.info("连接已建立。");
@@ -85,11 +83,13 @@ public class WSClient extends WebSocketClient {
     }
 
     @Override
-    public void onClose(int i, String s, boolean b) {
-        LOG.info("连接已断开。响应码：{}，理由：{}，由远程关闭：{}", i, s, b);
+    public void onClose(int code, String reason, boolean byRemote) {
+        LOG.info("连接已断开。响应码：{}，理由：{}，由远程关闭：{}", code, reason, byRemote);
         heartBeatThread.interrupt();
-        LOG.info("正在尝试重连...");
-        bot.connect();
+        if(byRemote) {
+            LOG.info("正在尝试重连...");
+            bot.connect();
+        }
     }
 
     @Override
@@ -111,6 +111,7 @@ final class HeartBeatThread extends Thread {
     public void run() {
         while (true) {
             try {
+                //noinspection BusyWait
                 Thread.sleep(heartbeatInterval);
             } catch (InterruptedException e) {
                 return;

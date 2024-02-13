@@ -42,34 +42,15 @@ public class ChannelSession {
         logEntries = new Log(channelId);
     }
 
-    private static String attrToString(LinkedHashMap<String, Integer> attr) {
-        final StringBuilder sb = new StringBuilder();
-        int i = 1;
-        for (Map.Entry<String, Integer> en : attr.entrySet()) {
-            if (i != 1 && i % 2 == 1) {
-                sb.append("\n");
-            }
-
-            sb.append(en.getKey()).append(":").append(en.getValue());
-
-            if (i % 2 != 0) {
-                sb.append("\t\t");
-            }
-
-            i++;
-        }
-
-        return sb.toString();
-    }
-
     public void handleMessage(Message message) {
         if (message.isBotMessage()) return;
         final String content = message.getContent();
+        if (content == null || content.isBlank()) return;
         if (content.startsWith(".")) {
             handleCommand(message);
         } else {
             if (on) {
-                final Player player = players.get(message.getAuthor().getID().getUniversalID());
+                final Player player = players.get(message.getAuthor().getID().asUuid());
                 final String name;
                 if (player != null && player.getCurrentCharacter() != null) {
                     name = player.getCurrentCharacter().getName();
@@ -85,11 +66,16 @@ public class ChannelSession {
         final String[] args = message.getContent().split(" ");
         if (args.length == 0) return;
 
-        final UUID universalID = message.getAuthor().getID().getUniversalID();
+        final UUID universalID = message.getAuthor().getID().asUuid();
         try {
             final UUID uuid = UUID.fromString(Main.getConfig().getMasterId());
             if (args[0].equals(".inspect") && Objects.equals(universalID, uuid)) {
                 bot.sendMessage(message, JSONObject.from(message).toString());
+                return;
+            }
+            if (args[0].equals(".reload") && Objects.equals(universalID, uuid)) {
+                Main.loadConfig();
+                bot.sendMessage(message, "配置已重载。");
                 return;
             }
         } catch (Exception e) {
@@ -102,16 +88,6 @@ public class ChannelSession {
 
         switch (args[0]) {
             case ".switch" -> {
-//                if (!message.member().hasRole(Main.getConfig().getKpRoleId())) {
-//                    bot.sendMessage(message, MessageBuilder.newInstance().at(message.author().id()).append("仅KP有权限使用此指令~").build());
-//                    return;
-//                }
-//
-//                if (args.length != 2 || (!args[1].equals("on") && !args[1].equals("off"))) {
-//                    bot.sendMessage(message, MessageBuilder.newInstance().at(message.author().id()).append("指令参数错误~").build());
-//                    return;
-//                }
-
                 if (args[1].equals("on")) {
                     if (on) {
                         bot.sendMessage(message, "Bot已经上线了呢~");
@@ -142,156 +118,312 @@ public class ChannelSession {
 
                 final Player player = players.get(universalID);
 
-                if (args.length == 1 || (args.length == 2 && args[1].equals("list"))) {
-                    final StringBuilder sb = new StringBuilder();
-                    sb.append(player.getName()).append("的全部角色卡：\n");
-                    for (PlayerCharacter character : player.getCharacters()) {
-                        if (Objects.equals(player.getCurrentCharacter(), character)) {
-                            sb.append("√ ");
-                        } else {
-                            sb.append("- ");
-                        }
-
-                        sb.append(character.getName()).append("\n");
-                    }
-                    sb.append("（共").append(player.getCharacters().size()).append("个）");
-                    bot.sendMessage(message, sb.toString());
-                } else if (args[1].equals("create")) {
-                    if (args.length < 3) {
-                        bot.sendMessage(message, message.atAuthor() + "指令参数错误~");
-                        return;
-                    }
-
-                    final PlayerCharacter pc = new PlayerCharacter(args[2]);
-                    for (int i = 3; i < args.length; i++) {
-                        final String[] attr = args[i].split(":");
-                        final String attrName = PlayerCharacter.getStandardName(attr[0]);
-                        final Integer attrVal = Integer.valueOf(attr[1]);
-
-                        pc.getAttr().put(attrName, attrVal);
-                    }
-
-                    player.getCharacters().add(pc);
-                    try {
-                        player.save();
-                    } catch (IOException e) {
-                        LOG.error("无法保存PL信息", e);
-                    }
-
-                    bot.sendMessage(message, "角色 " + pc.getName() + " 创建成功！");
-                } else if (args[1].equals("switch")) {
-                    if (args.length != 3) {
-                        bot.sendMessage(message, "指令参数错误~");
-                        return;
-                    }
-
-                    final String pcName = args[2];
-
-                    final Optional<PlayerCharacter> any = player.getCharacters().stream().filter(pc -> Objects.equals(pc.getName(), pcName)).findAny();
-                    any.ifPresentOrElse(pc -> {
-                        player.setCurrentCharacter(pc);
-                        bot.sendMessage(message, "切换角色" + pc.getName() + "成功~");
-                    }, () -> bot.sendMessage(message, "无法找到角色 " + pcName + " ！"));
-
-                    try {
-                        player.save();
-                    } catch (IOException e) {
-                        LOG.error("无法保存PL信息", e);
-                    }
-                } else if (args[1].equals("attr")) {
-                    if (args.length < 3) {
-                        bot.sendMessage(message, "指令参数错误~");
-                        return;
-                    }
-
-                    switch (args[2]) {
-                        case "get" -> {
-                            if (args.length == 3) {
-                                if (player.getCurrentCharacter() != null) {
-                                    bot.sendMessage(message, player.getCurrentCharacter().getName() +
-                                            "的属性\n" + attrToString(player.getCurrentCharacter().getAttr()));
-                                } else {
-                                    bot.sendMessage(message, message.atAuthor() + "未选择角色~");
-                                }
+                switch (args[1]) {
+                    case "list" -> {
+                        final StringBuilder sb = new StringBuilder();
+                        sb.append(player.getName()).append("的全部角色卡：\n");
+                        for (PlayerCharacter character : player.getCharacters()) {
+                            if (Objects.equals(player.getCurrentCharacter(), character)) {
+                                sb.append("√ ");
                             } else {
-                                final String pcName = args[3];
-                                final Optional<PlayerCharacter> op = player.getCharacters().stream().filter(pc -> Objects.equals(pc.getName(), pcName)).findAny();
-                                op.ifPresentOrElse(pc -> bot.sendMessage(message, message.atAuthor() + pc.getName() + "的属性：\n" + attrToString(pc.getAttr()))
-                                        , () -> bot.sendMessage(message, message.atAuthor() + "无法找到角色 " + pcName + " !"));
+                                sb.append("- ");
                             }
+
+                            sb.append(character.getName()).append("\n");
                         }
-                        case "set" -> {
-                            if (args.length < 5 || args.length % 2 != 1) {
-                                bot.sendMessage(message, message.atAuthor() + "指令参数错误~");
-                                return;
-                            }
-                            final PlayerCharacter curPC = player.getCurrentCharacter();
+                        sb.append("（共").append(player.getCharacters().size()).append("个）");
+                        bot.sendMessage(message, sb.toString());
+                    }
+                    case "create" -> {
+                        if (args.length < 3) {
+                            bot.sendMessage(message, message.atAuthor() + "指令参数错误~");
+                            return;
+                        }
 
-                            if (curPC == null) {
-                                bot.sendMessage(message, message.atAuthor() + "未选择角色~");
-                                return;
-                            }
+                        if (player.getCharacters().stream().anyMatch(pc -> Objects.equals(args[2], pc.getName()))) {
+                            bot.sendMessage(message, message.atAuthor() + "命名重复！！");
+                            return;
+                        }
 
-                            final StringBuilder reply = new StringBuilder();
-                            reply.append(curPC.getName()).append("属性更改：\n");
-                            for (int i = 3; i < args.length; i += 2) {
-                                final String standardName = PlayerCharacter.getStandardName(args[i]);
-                                if (!isDigit(args[i + 1])) {
-                                    reply.append(standardName).append("设置失败：非数字").append("\n");
+                        final PlayerCharacter pc = new PlayerCharacter(args[2]);
+                        for (int i = 3; i < args.length; i++) {
+                            final String[] attr = args[i].split(":");
+                            final String attrName = PlayerCharacter.getStandardName(attr[0]);
+                            final int attrVal = Integer.parseInt(attr[1]);
+
+                            pc.setAttr(attrName, attrVal);
+                        }
+
+                        player.getCharacters().add(pc);
+                        try {
+                            player.save();
+                        } catch (IOException e) {
+                            LOG.error("无法保存PL信息", e);
+                        }
+
+                        bot.sendMessage(message, "角色 " + pc.getName() + " 创建成功！");
+                    }
+                    case "switch" -> {
+                        if (args.length != 3) {
+                            bot.sendMessage(message, "指令参数错误~");
+                            return;
+                        }
+
+                        final String pcName = args[2];
+
+                        final Optional<PlayerCharacter> any = player.getCharacters().stream().filter(pc -> Objects.equals(pc.getName(), pcName)).findAny();
+                        any.ifPresentOrElse(pc -> {
+                            player.setCurrentCharacter(pc);
+                            bot.sendMessage(message, "切换角色" + pc.getName() + "成功~");
+                        }, () -> bot.sendMessage(message, "无法找到角色 " + pcName + " ！"));
+                        refreshPlayerNickname(message);
+
+                        try {
+                            player.save();
+                        } catch (IOException e) {
+                            LOG.error("无法保存PL信息", e);
+                        }
+                    }
+                    case "attr" -> {
+                        if (args.length < 3) {
+                            bot.sendMessage(message, "指令参数错误~");
+                            return;
+                        }
+
+                        switch (args[2]) {
+                            case "get" -> {
+                                if (args.length == 3) {
+                                    final PlayerCharacter curPC = player.getCurrentCharacter();
+                                    if (curPC != null) {
+                                        bot.sendMessage(message, curPC.getName() +
+                                                "的属性\n" + curPC.listAttr());
+                                    } else {
+                                        bot.sendMessage(message, message.atAuthor() + "未选择角色~");
+                                    }
                                 } else {
-                                    curPC.getAttr().put(standardName, Integer.valueOf(args[i + 1]));
-                                    reply.append(standardName).append("成功设置为：").append(args[i + 1]).append("\n");
+                                    final String pcName = args[3];
+                                    final Optional<PlayerCharacter> op = player.getCharacters().stream().filter(pc -> Objects.equals(pc.getName(), pcName)).findAny();
+                                    op.ifPresentOrElse(pc -> bot.sendMessage(message, message.atAuthor() + pc.getName() + "的属性：\n" + pc.listAttr())
+                                            , () -> bot.sendMessage(message, message.atAuthor() + "无法找到角色 " + pcName + " !"));
                                 }
                             }
+                            case "set" -> {
+                                if (args.length < 5 || args.length % 2 != 1) {
+                                    bot.sendMessage(message, message.atAuthor() + "指令参数错误~");
+                                    return;
+                                }
+                                final PlayerCharacter curPC = player.getCurrentCharacter();
 
-                            try {
-                                player.save();
-                            } catch (IOException e) {
-                                LOG.error("无法保存PL信息", e);
-                            }
+                                if (curPC == null) {
+                                    bot.sendMessage(message, message.atAuthor() + "未选择角色~");
+                                    return;
+                                }
 
-                            bot.sendMessage(message, message.atAuthor() + "\n" + reply);
-                        }
-                        case "modify" -> {
-                            if (args.length < 5 || args.length % 2 != 1) {
-                                bot.sendMessage(message, message.atAuthor() + "指令参数错误~");
-                                return;
-                            }
-                            final PlayerCharacter curPC = player.getCurrentCharacter();
-
-                            if (curPC == null) {
-                                bot.sendMessage(message, message.atAuthor() + "未选择角色~");
-                                return;
-                            }
-
-                            final StringBuilder reply = new StringBuilder();
-                            reply.append(curPC.getName()).append("属性更改：\n");
-                            for (int i = 3; i < args.length; i += 2) {
-                                final String standardName = PlayerCharacter.getStandardName(args[i]);
-
-                                if (!isDigit(args[i + 1])) {
-                                    reply.append(standardName).append("更改失败：非数字").append("\n");
-                                } else {
-                                    if (!curPC.getAttr().containsKey(standardName)) {
-                                        reply.append(standardName).append("更改失败：找不到属性").append("\n");
+                                final StringBuilder reply = new StringBuilder();
+                                reply.append(message.atAuthor());
+                                reply.append(curPC.getName()).append("属性更改：\n");
+                                for (int i = 3; i < args.length; i += 2) {
+                                    final String standardName = PlayerCharacter.getStandardName(args[i]);
+                                    if (!isDigit(args[i + 1])) {
+                                        reply.append(standardName).append("设置失败：非数字").append("\n");
                                     } else {
-                                        curPC.getAttr().put(standardName, curPC.getAttr().get(standardName) + Integer.parseInt(args[i + 1]));
-                                        reply.append(standardName).append("成功更改为：").append(curPC.getAttr().get(standardName)).append("\n");
+                                        final int orig = curPC.getAttr(standardName);
+                                        curPC.setAttr(standardName, Integer.parseInt(args[i + 1]));
+                                        reply.append(standardName).append("成功设置为：").append(orig).append("->").append(args[i + 1]).append("\n");
+                                    }
+                                }
+                                refreshPlayerNickname(message);
+
+                                try {
+                                    player.save();
+                                } catch (IOException e) {
+                                    LOG.error("无法保存PL信息", e);
+                                }
+
+                                bot.sendMessage(message, reply.toString());
+                            }
+                            case "modify" -> {
+                                if (args.length < 5 || args.length % 2 != 1) {
+                                    bot.sendMessage(message, message.atAuthor() + "指令参数错误~");
+                                    return;
+                                }
+                                final PlayerCharacter curPC = player.getCurrentCharacter();
+
+                                if (curPC == null) {
+                                    bot.sendMessage(message, message.atAuthor() + "未选择角色~");
+                                    return;
+                                }
+
+                                final StringBuilder reply = new StringBuilder();
+                                reply.append(message.atAuthor()).append(curPC.getName()).append("属性更改：\n");
+                                for (int i = 3; i < args.length; i += 2) {
+                                    final String standardName = PlayerCharacter.getStandardName(args[i]);
+
+                                    if (!isDigit(args[i + 1])) {
+                                        reply.append(standardName).append("更改失败：非数字").append("\n");
+                                    } else {
+                                        if (!curPC.hasAttr(standardName)) {
+                                            reply.append(standardName).append("更改失败：找不到属性").append("\n");
+                                        } else {
+                                            final int orig = curPC.getAttr(standardName);
+                                            curPC.modAttr(standardName, Integer.parseInt(args[i + 1]));
+                                            reply.append(standardName).append("成功更改为：").append(orig).append("->").append(curPC.getAttr(standardName)).append("\n");
+                                        }
+                                    }
+                                }
+                                refreshPlayerNickname(message);
+                                try {
+                                    player.save();
+                                } catch (IOException e) {
+                                    LOG.error("无法保存PL信息", e);
+                                }
+
+                                bot.sendMessage(message, reply.toString());
+                            }
+                            default -> bot.sendMessage(message, message.atAuthor() + "找不到指令 " + args[2]);
+                        }
+                    }
+                    case "rename" -> {
+                        if (args.length != 4 && args.length != 3) {
+                            bot.sendMessage(message, message.atAuthor() + "指令参数错误~");
+                            return;
+                        }
+
+                        if (args.length == 3) {
+                            if (player != null) {
+                                final PlayerCharacter curPC = player.getCurrentCharacter();
+                                if (curPC != null) {
+                                    final String target = args[2];
+                                    if (player.getCharacters().stream().anyMatch(pc -> Objects.equals(pc.getName(), target))) {
+                                        bot.sendMessage(message, message.atAuthor() + "命名重复！！");
+                                    } else {
+                                        final String orig = curPC.getName();
+                                        curPC.setName(target);
+                                        try {
+                                            player.save();
+                                        } catch (IOException e) {
+                                            LOG.error("无法保存玩家信息!", e);
+                                        }
+                                        bot.sendMessage(message, message.atAuthor() + "角色 " + orig + " 已更名为 " + target + " 。");
                                     }
                                 }
                             }
+                        } else {
+                            if (player != null) {
+                                final String orig = args[2];
+                                final String target = args[3];
 
+                                player.getCharacters().stream().filter(pc -> Objects.equals(pc.getName(), orig)).findFirst().ifPresentOrElse(pc -> {
+                                    pc.setName(target);
+                                    try {
+                                        player.save();
+                                    } catch (IOException e) {
+                                        LOG.error("无法保存玩家信息!", e);
+                                    }
+                                    bot.sendMessage(message, message.atAuthor() + "角色 " + orig + " 已更名为 " + target + " 。");
+                                }, () -> bot.sendMessage(message, message.atAuthor() + "角色 " + orig + " 未找到"));
+                            }
+                        }
+                    }
+                    case "delete" -> {
+                        if (args.length != 3) {
+                            bot.sendMessage(message, message.atAuthor() + "指令参数错误~");
+                            return;
+                        }
+
+                        if (player.getCurrentCharacter() != null && player.getCurrentCharacter().getName().equals(args[2])) {
+                            bot.sendMessage(message, message.atAuthor() + "不能删除已选择的角色 /_ \\");
+                            return;
+                        }
+
+                        player.getCharacters().stream().filter(pc -> Objects.equals(pc.getName(), args[2])).findFirst().ifPresentOrElse(pc -> {
+                            if (player.getCharacters().remove(pc)) {
+                                bot.sendMessage(message, message.atAuthor() + "角色 " + args[2] + " 已删除。");
+                            } else {
+                                bot.sendMessage(message, message.atAuthor() + "角色 " + args[2] + " 删除失败!?");
+                            }
                             try {
                                 player.save();
                             } catch (IOException e) {
-                                LOG.error("无法保存PL信息", e);
+                                LOG.error("无法保存玩家信息!", e);
                             }
+                        }, () -> bot.sendMessage(message, message.atAuthor() + "角色 " + args[2] + " 未找到"));
+                    }
+                    default -> bot.sendMessage(message, "未知的指令 " + args[1]);
+                }
+            }
+            case ".attr" -> {
+                if (args.length == 1 || (args.length != 2 && args.length % 2 == 0)) {
+                    bot.sendMessage(message, message.atAuthor() + "指令参数错误~");
+                    return;
+                }
+                reloadPlayer(universalID);
+                players.putIfAbsent(universalID, new Player(universalID, message.getAuthor().getUsername()));
+                final Player player = players.get(universalID);
 
-                            bot.sendMessage(message, message.atAuthor() + "\n" + reply);
+                final PlayerCharacter curPC = player.getCurrentCharacter();
+                if (curPC == null) {
+                    bot.sendMessage(message, message.atAuthor() + "未选择角色😰");
+                    return;
+                }
+
+                if (args.length == 2) {
+                    final String attrStr = args[1];
+                    if (!curPC.hasAttr(attrStr)) {
+                        bot.sendMessage(message, message.atAuthor() + "找不到 " + curPC.getName() + " 的 " + attrStr + " 属性!");
+                    } else {
+                        bot.sendMessage(message, message.atAuthor() + "\n" + curPC.getName() + " 的 " + attrStr + " 为 " + curPC.getAttr(attrStr));
+                    }
+                    return;
+                }
+
+                final StringBuilder reply = new StringBuilder();
+                reply.append(message.atAuthor()).append(curPC.getName()).append("属性更改：\n");
+
+                for (int i = 1; i < args.length; i += 2) {
+                    final String attrName = args[i];
+                    final String op = args[i + 1];
+
+                    reply.append("属性").append(attrName).append(" ");
+
+                    if (op.startsWith("-") || op.startsWith("+")) {
+                        if (!curPC.hasAttr(attrName)) {
+                            reply.append("更改失败：找不到属性\n");
+                            continue;
                         }
-                        default -> bot.sendMessage(message, message.atAuthor() + "找不到指令 " + args[2]);
+
+                        if (isDigit(op)) {
+                            final int mod = Integer.parseInt(op);
+                            final int orig = curPC.getAttr(attrName);
+
+                            curPC.modAttr(attrName, mod);
+
+                            reply.append("更改成功：").append(orig).append(op).append(" = ").append(curPC.getAttr(attrName)).append("\n");
+                        } else {
+                            reply.append("更改失败：不是有效操作\n");
+                        }
+                    } else if (op.startsWith("=")) {
+                        if (isDigit(op.substring(1))) {
+                            final int value = Integer.parseInt(op.substring(1));
+                            String orig = "?";
+                            if (curPC.hasAttr(attrName)) {
+                                orig = String.valueOf(curPC.getAttr(attrName));
+                            }
+                            curPC.setAttr(attrName, value);
+                            reply.append("设置成功：").append(orig).append(" -> ").append(curPC.getAttr(attrName)).append("\n");
+                        } else {
+                            reply.append("设置失败：不是有效操作\n");
+                        }
                     }
                 }
+
+                try {
+                    player.save();
+                } catch (IOException e) {
+                    LOG.error("无法保存玩家信息", e);
+                }
+
+                bot.sendMessage(message, reply.toString());
             }
             case ".r" -> {
                 final StringBuilder sb = new StringBuilder();
@@ -348,7 +480,7 @@ public class ChannelSession {
                 final PlayerCharacter pc = player.getCurrentCharacter();
 
                 final String attrName = PlayerCharacter.getStandardName(args[1]);
-                if (!pc.getAttr().containsKey(attrName)) {
+                if (!pc.hasAttr(attrName)) {
                     bot.sendMessage(message, message.atAuthor() + "找不到属性 " + attrName + " ~");
                     return;
                 }
@@ -357,33 +489,11 @@ public class ChannelSession {
                 reply.append(pc.getName()).append(" 投掷 ").append(attrName).append(" 1d100=");
 
                 final int result = new Dice().roll(DiceExpr.CHECK).total();
-                final double value = pc.getAttr().get(attrName);
+                final double value = pc.getAttr(attrName);
 
                 reply.append(result).append("/").append((int) value).append(",");
 
-                if (result == 1) {
-                    reply.append("大成功！！！");
-                    reply.append(comments[0][new Random().nextInt(comments[0].length)]);
-                } else if (result <= Math.floor(value / 5.0)) {
-                    reply.append("极难成功！！");
-                    reply.append(comments[1][new Random().nextInt(comments[1].length)]);
-                } else if (result <= Math.floor(value / 2.0)) {
-                    reply.append("困难成功！");
-                    reply.append(comments[2][new Random().nextInt(comments[2].length)]);
-                } else if (result <= Math.floor(value)) {
-                    reply.append("成功！");
-                    reply.append(comments[3][new Random().nextInt(comments[3].length)]);
-                } else {
-                    if ((value <= 50 && result >= 96) || (value > 50 && result >= 100)) {
-                        reply.append("大失败！！！");
-                        reply.append(comments[5][new Random().nextInt(comments[5].length)]);
-                    } else {
-                        reply.append("失败！");
-                        reply.append(comments[4][new Random().nextInt(comments[4].length)]);
-                    }
-                }
-
-                bot.sendMessage(message, reply.toString());
+                judgeCheckResult(message, reply, result, value);
 
                 logEntries.attach(new CheckLogEntry(message.getContent(), message.getAuthor().getUsername(), player.getCurrentCharacter().getName(),
                         message.getTimestamp(), (int) value, result, attrName, null));
@@ -405,7 +515,7 @@ public class ChannelSession {
                 final PlayerCharacter pc = player.getCurrentCharacter();
 
                 final String attrName = PlayerCharacter.getStandardName(args[1]);
-                if (!pc.getAttr().containsKey(attrName)) {
+                if (!pc.hasAttr(attrName)) {
                     bot.sendMessage(message, message.atAuthor() + "找不到属性 " + attrName + " ~");
                     return;
                 }
@@ -440,36 +550,14 @@ public class ChannelSession {
                 }
 
                 final int result = Math.max(a, Math.max(b, c));
-                final double value = pc.getAttr().get(attrName);
+                final double value = pc.getAttr(attrName);
 
                 String mod = "[" + a +
                         "," + b + "," + c +
                         "]";
                 reply.append(result).append("/").append((int) value).append(mod).append(",");
 
-                if (result == 1) {
-                    reply.append("大成功！！！");
-                    reply.append(comments[0][new Random().nextInt(comments[0].length)]);
-                } else if (result <= Math.floor(value / 5.0)) {
-                    reply.append("极难成功！！");
-                    reply.append(comments[1][new Random().nextInt(comments[1].length)]);
-                } else if (result <= Math.floor(value / 2.0)) {
-                    reply.append("困难成功！");
-                    reply.append(comments[2][new Random().nextInt(comments[2].length)]);
-                } else if (result <= Math.floor(value)) {
-                    reply.append("成功！");
-                    reply.append(comments[3][new Random().nextInt(comments[3].length)]);
-                } else {
-                    if ((value <= 50 && result >= 96) || (value > 50 && result >= 100)) {
-                        reply.append("大失败！！！");
-                        reply.append(comments[5][new Random().nextInt(comments[5].length)]);
-                    } else {
-                        reply.append("失败！");
-                        reply.append(comments[4][new Random().nextInt(comments[4].length)]);
-                    }
-                }
-
-                bot.sendMessage(message, reply.toString());
+                judgeCheckResult(message, reply, result, value);
 
                 logEntries.attach(new CheckLogEntry(message.getContent(), message.getAuthor().getUsername(), player.getCurrentCharacter().getName(),
                         message.getTimestamp(), (int) value, result, attrName, "惩罚骰" + mod));
@@ -491,7 +579,7 @@ public class ChannelSession {
                 final PlayerCharacter pc = player.getCurrentCharacter();
 
                 final String attrName = PlayerCharacter.getStandardName(args[1]);
-                if (!pc.getAttr().containsKey(attrName)) {
+                if (!pc.hasAttr(attrName)) {
                     bot.sendMessage(message, message.atAuthor() + "找不到属性 " + attrName + " ~");
                     return;
                 }
@@ -519,36 +607,14 @@ public class ChannelSession {
                 }
 
                 final int result = Math.max(a, b);
-                final double value = pc.getAttr().get(attrName);
+                final double value = pc.getAttr(attrName);
 
                 final StringBuilder mod = new StringBuilder();
                 mod.append("[").append(a).append(",").append(b).append("]");
 
                 reply.append(result).append("/").append((int) value).append(mod).append(",");
 
-                if (result == 1) {
-                    reply.append("大成功！！！");
-                    reply.append(comments[0][new Random().nextInt(comments[0].length)]);
-                } else if (result <= Math.floor(value / 5.0)) {
-                    reply.append("极难成功！！");
-                    reply.append(comments[1][new Random().nextInt(comments[1].length)]);
-                } else if (result <= Math.floor(value / 2.0)) {
-                    reply.append("困难成功！");
-                    reply.append(comments[2][new Random().nextInt(comments[2].length)]);
-                } else if (result <= Math.floor(value)) {
-                    reply.append("成功！");
-                    reply.append(comments[3][new Random().nextInt(comments[3].length)]);
-                } else {
-                    if ((value <= 50 && result >= 96) || (value > 50 && result >= 100)) {
-                        reply.append("大失败！！！");
-                        reply.append(comments[5][new Random().nextInt(comments[5].length)]);
-                    } else {
-                        reply.append("失败！");
-                        reply.append(comments[4][new Random().nextInt(comments[4].length)]);
-                    }
-                }
-
-                bot.sendMessage(message, reply.toString());
+                judgeCheckResult(message, reply, result, value);
 
                 logEntries.attach(new CheckLogEntry(message.getContent(), message.getAuthor().getUsername(), player.getCurrentCharacter().getName(),
                         message.getTimestamp(), (int) value, result, attrName, "惩罚骰" + mod));
@@ -570,7 +636,7 @@ public class ChannelSession {
                 final PlayerCharacter pc = player.getCurrentCharacter();
 
                 final String attrName = PlayerCharacter.getStandardName(args[1]);
-                if (!pc.getAttr().containsKey(attrName)) {
+                if (!pc.hasAttr(attrName)) {
                     bot.sendMessage(message, message.atAuthor() + "找不到属性 " + attrName + " ~");
                     return;
                 }
@@ -598,36 +664,14 @@ public class ChannelSession {
                 }
 
                 final int result = Math.min(a, b);
-                final double value = pc.getAttr().get(attrName);
+                final double value = pc.getAttr(attrName);
 
                 final StringBuilder mod = new StringBuilder();
                 mod.append("[").append(a).append(",").append(b).append("]");
 
                 reply.append(result).append("/").append((int) value).append(mod).append(",");
 
-                if (result == 1) {
-                    reply.append("大成功！！！");
-                    reply.append(comments[0][new Random().nextInt(comments[0].length)]);
-                } else if (result <= Math.floor(value / 5.0)) {
-                    reply.append("极难成功！！");
-                    reply.append(comments[1][new Random().nextInt(comments[1].length)]);
-                } else if (result <= Math.floor(value / 2.0)) {
-                    reply.append("困难成功！");
-                    reply.append(comments[2][new Random().nextInt(comments[2].length)]);
-                } else if (result <= Math.floor(value)) {
-                    reply.append("成功！");
-                    reply.append(comments[3][new Random().nextInt(comments[3].length)]);
-                } else {
-                    if ((value <= 50 && result >= 96) || (value > 50 && result >= 100)) {
-                        reply.append("大失败！！！");
-                        reply.append(comments[5][new Random().nextInt(comments[5].length)]);
-                    } else {
-                        reply.append("失败！");
-                        reply.append(comments[4][new Random().nextInt(comments[4].length)]);
-                    }
-                }
-
-                bot.sendMessage(message, reply.toString());
+                judgeCheckResult(message, reply, result, value);
                 logEntries.attach(new CheckLogEntry(message.getContent(), message.getAuthor().getUsername(), player.getCurrentCharacter().getName(),
                         message.getTimestamp(), (int) value, result, attrName, "奖励骰" + mod));
 
@@ -649,7 +693,7 @@ public class ChannelSession {
                 final PlayerCharacter pc = player.getCurrentCharacter();
 
                 final String attrName = PlayerCharacter.getStandardName(args[1]);
-                if (!pc.getAttr().containsKey(attrName)) {
+                if (!pc.hasAttr(attrName)) {
                     bot.sendMessage(message, message.atAuthor() + "找不到属性 " + attrName + " ~");
                     return;
                 }
@@ -685,35 +729,13 @@ public class ChannelSession {
                 }
 
                 final int result = Math.min(a, Math.min(b, c));
-                final double value = pc.getAttr().get(attrName);
+                final double value = pc.getAttr(attrName);
 
                 String mod = "[" + a + "," + b + "," + c + "]";
 
                 reply.append(result).append("/").append((int) value).append(mod).append(",");
 
-                if (result == 1) {
-                    reply.append("大成功！！！");
-                    reply.append(comments[0][new Random().nextInt(comments[0].length)]);
-                } else if (result <= Math.floor(value / 5.0)) {
-                    reply.append("极难成功！！");
-                    reply.append(comments[1][new Random().nextInt(comments[1].length)]);
-                } else if (result <= Math.floor(value / 2.0)) {
-                    reply.append("困难成功！");
-                    reply.append(comments[2][new Random().nextInt(comments[2].length)]);
-                } else if (result <= Math.floor(value)) {
-                    reply.append("成功！");
-                    reply.append(comments[3][new Random().nextInt(comments[3].length)]);
-                } else {
-                    if ((value <= 50 && result >= 96) || (value > 50 && result >= 100)) {
-                        reply.append("大失败！！！");
-                        reply.append(comments[5][new Random().nextInt(comments[5].length)]);
-                    } else {
-                        reply.append("失败！");
-                        reply.append(comments[4][new Random().nextInt(comments[4].length)]);
-                    }
-                }
-
-                bot.sendMessage(message, reply.toString());
+                judgeCheckResult(message, reply, result, value);
                 logEntries.attach(new CheckLogEntry(message.getContent(), message.getAuthor().getUsername(), player.getCurrentCharacter().getName(),
                         message.getTimestamp(), (int) value, result, attrName, "奖励骰" + mod));
             }
@@ -738,7 +760,7 @@ public class ChannelSession {
 
                 reply.append(pc.getName()).append(" 进行理智检定 1d100=");
 
-                int san = pc.getAttr().get(PlayerCharacter.getStandardName("理智"));
+                int san = pc.getAttr("理智");
                 final int origSan = san;
                 final int roll = new Random().nextInt(100) + 1;
 
@@ -758,8 +780,8 @@ public class ChannelSession {
                 san -= total;
                 reply.append("损失 ").append(str).append("=").append(total).append(" 点理智。当前理智为 ").append(san).append(" 。");
 
-                if (pc.getAttr().containsKey(PlayerCharacter.getStandardName("理智"))) {
-                    pc.getAttr().put(PlayerCharacter.getStandardName("理智"), san);
+                if (pc.hasAttr("理智")) {
+                    pc.setAttr("理智", san);
                 }
 
                 if (san <= 0) {
@@ -775,6 +797,7 @@ public class ChannelSession {
                 }
 
                 bot.sendMessage(message, reply.toString());
+                refreshPlayerNickname(message);
 
                 logEntries.attach(new CheckLogEntry(message.getContent(), message.getAuthor().getUsername(), player.getCurrentCharacter().getName(),
                         message.getTimestamp(), origSan, roll, "理智", null));
@@ -783,6 +806,32 @@ public class ChannelSession {
                         message.getTimestamp(), "损失理智", str, String.valueOf(total), null));
             }
         }
+    }
+
+    private void judgeCheckResult(Message message, StringBuilder reply, int result, double value) {
+        if (result == 1) {
+            reply.append("大成功！！！");
+            reply.append(comments[0][new Random().nextInt(comments[0].length)]);
+        } else if (result <= Math.floor(value / 5.0)) {
+            reply.append("极难成功！！");
+            reply.append(comments[1][new Random().nextInt(comments[1].length)]);
+        } else if (result <= Math.floor(value / 2.0)) {
+            reply.append("困难成功！");
+            reply.append(comments[2][new Random().nextInt(comments[2].length)]);
+        } else if (result <= Math.floor(value)) {
+            reply.append("成功！");
+            reply.append(comments[3][new Random().nextInt(comments[3].length)]);
+        } else {
+            if ((value <= 50 && result >= 96) || (value > 50 && result >= 100)) {
+                reply.append("大失败！！！");
+                reply.append(comments[5][new Random().nextInt(comments[5].length)]);
+            } else {
+                reply.append("失败！");
+                reply.append(comments[4][new Random().nextInt(comments[4].length)]);
+            }
+        }
+
+        bot.sendMessage(message, reply.toString());
     }
 
     private void reloadPlayer(UUID universalID) {
@@ -794,5 +843,13 @@ public class ChannelSession {
         } catch (IOException e) {
             LOG.warn("读取玩家信息失败", e);
         }
+    }
+
+    private void refreshPlayerNickname(Message msg) {
+        final Player player = players.get(msg.getAuthor().getID().asUuid());
+        if (player == null || player.getCurrentCharacter() == null) return;
+        final PlayerCharacter pc = player.getCurrentCharacter();
+
+        bot.changeNickname(msg.getAuthor().getID(), pc.buildName());
     }
 }

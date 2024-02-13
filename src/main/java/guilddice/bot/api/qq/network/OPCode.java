@@ -1,5 +1,6 @@
-package guilddice.bot.api.qq;
+package guilddice.bot.api.qq.network;
 
+@SuppressWarnings("unused")
 public class OPCode {
     public static final int DISPATCH = 0;
     public static final int HEARTBEAT = 1;

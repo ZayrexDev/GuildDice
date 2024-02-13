@@ -3,6 +3,7 @@ package guilddice.bot.api.qq;
 import com.alibaba.fastjson2.JSONObject;
 import guilddice.bot.ChannelSession;
 import guilddice.bot.api.universal.Bot;
+import guilddice.bot.api.universal.ID;
 import guilddice.bot.api.universal.Message;
 import guilddice.bot.api.qq.msg.QQMessage;
 import guilddice.bot.api.qq.network.WSClient;
@@ -98,7 +99,7 @@ public class QQBot extends Bot {
     }
     private final HashMap<String, ChannelSession> sessions = new HashMap<>();
 
-    public void onMessage(JSONObject d, boolean b) {
+    public void onMessage(JSONObject d) {
         final String channelId = d.getString("channel_id");
         if (!sessions.containsKey(channelId)) {
             sessions.put(channelId, new ChannelSession(this, channelId));
@@ -125,5 +126,10 @@ public class QQBot extends Bot {
         } catch (IOException e) {
             LOG.error("发送消息失败！", e);
         }
+    }
+
+    @Override
+    public void changeNickname(ID id, String nickname) {
+        // QQ频道貌似不支持修改名称😓
     }
 }

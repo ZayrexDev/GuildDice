@@ -1,8 +1,8 @@
 package guilddice.bot.api.qq.msg;
 
 import guilddice.bot.api.universal.Message;
-import guilddice.bot.api.qq.QQMember;
-import guilddice.bot.api.qq.QQUser;
+import guilddice.bot.api.qq.user.QQMember;
+import guilddice.bot.api.qq.user.QQUser;
 import guilddice.bot.api.universal.User;
 import guilddice.bot.api.qq.msg.extra.MessageArk;
 import guilddice.bot.api.qq.msg.extra.MessageAttachment;
@@ -11,6 +11,7 @@ import guilddice.bot.api.qq.msg.extra.MessageReference;
 
 import java.util.Objects;
 
+@SuppressWarnings("unused")
 public final class QQMessage extends Message {
     private final String id;
     private final String channel_id;

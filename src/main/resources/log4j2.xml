@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="WARN" monitorInterval="60">
     <Properties>
-        <Property name="logDir">./log</Property>
+        <Property name="logDir">./data/logs</Property>
     </Properties>
 
     <Appenders>

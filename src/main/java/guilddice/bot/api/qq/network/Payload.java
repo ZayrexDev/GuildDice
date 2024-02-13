@@ -1,11 +1,12 @@
-package guilddice.bot.api.qq;
+package guilddice.bot.api.qq.network;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.alibaba.fastjson2.JSONWriter;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
-@Setter @Getter
+@Setter @Getter @AllArgsConstructor
 public class Payload {
     private int operationCode;
 
@@ -14,13 +15,6 @@ public class Payload {
     private Integer serialNum;
 
     private String eventType;
-
-    public Payload(int operationCode, JSONObject data, int serialNum, String eventType) {
-        this.operationCode = operationCode;
-        this.data = data;
-        this.serialNum = serialNum;
-        this.eventType = eventType;
-    }
 
     public Payload(int operationCode, JSONObject data) {
         this.operationCode = operationCode;

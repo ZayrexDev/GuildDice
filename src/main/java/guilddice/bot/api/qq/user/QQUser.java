@@ -1,10 +1,11 @@
-package guilddice.bot.api.qq;
+package guilddice.bot.api.qq.user;
 
 import guilddice.bot.api.universal.ID;
 import guilddice.bot.api.universal.User;
 
 import java.util.Objects;
 
+@SuppressWarnings("unused")
 public final class QQUser extends User {
     private final String id;
     private final String username;

@@ -18,8 +18,7 @@ public class Converter {
     public static void main(String[] args) throws IOException {
         if (args.length != 2) return;
         final Path output = Path.of("output.txt");
-        if (Files.exists(output)) Files.delete(output)
-                ;
+        if (Files.exists(output)) Files.delete(output);
         Files.createFile(output);
         final OutputType type;
 

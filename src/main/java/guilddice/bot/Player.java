@@ -41,6 +41,7 @@ public class Player {
         }
 
         final JSONObject obj = JSONObject.parse(Files.readString(plPath));
+        if(obj == null) return null;
 
         final Player player = new Player(id, obj.getString("name"), obj.getList("pc", PlayerCharacter.class));
         final String selectedStr = obj.getString("selected");

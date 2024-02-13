@@ -9,16 +9,16 @@ import java.util.Map;
 
 @Data
 public class PlayerCharacter {
-    private final String name;
-    private final LinkedHashMap<String, Integer> attr;
+    private final LinkedHashMap<String, Integer> attrs;
+    private String name;
 
     public PlayerCharacter(String name) {
         this.name = name;
-        this.attr = new LinkedHashMap<>();
+        this.attrs = new LinkedHashMap<>();
 
         if (Main.DEFAULT_ATTR != null) {
             for (Map.Entry<String, Object> stringObjectEntry : Main.DEFAULT_ATTR.entrySet()) {
-                attr.put(stringObjectEntry.getKey(), (Integer) stringObjectEntry.getValue());
+                attrs.put(stringObjectEntry.getKey(), (Integer) stringObjectEntry.getValue());
             }
         }
     }
@@ -35,5 +35,73 @@ public class PlayerCharacter {
         }
 
         return orig;
+    }
+
+    public String listAttr() {
+        final StringBuilder sb = new StringBuilder();
+        int i = 1;
+        for (Map.Entry<String, Integer> en : this.attrs.entrySet()) {
+            if (i != 1 && i % 2 == 1) {
+                sb.append("\n");
+            }
+
+            sb.append(en.getKey()).append(":").append(en.getValue());
+
+            if (i % 2 != 0) {
+                sb.append("\t\t");
+            }
+
+            i++;
+        }
+
+        return sb.toString();
+    }
+
+    public int getAttr(String attrName) {
+        if (hasAttr(getStandardName(attrName))) {
+            return getAttrs().get(getStandardName(attrName));
+        } else {
+            return -1;
+        }
+    }
+
+    public void setAttr(String attrName, int value) {
+        getAttrs().put(getStandardName(attrName), value);
+    }
+
+    public boolean hasAttr(String attrName) {
+        return getAttrs().containsKey(getStandardName(attrName));
+    }
+
+    public void modAttr(String attrName, int mod) {
+        getAttrs().put(getStandardName(attrName), getAttr(getStandardName(attrName)) + mod);
+    }
+
+    public String buildName() {
+        if (!hasAttr("HP") || !hasAttr("SAN")) {
+            return null;
+        }
+        final StringBuilder builder = new StringBuilder();
+        builder.append(getName()).append(" ");
+
+        if (hasAttr("HP")) {
+            builder.append("HP:").append(getAttr("HP"));
+        }
+
+        if (getAttrs().containsKey(getStandardName("SIZ")) && getAttrs().containsKey(getStandardName("CON"))) {
+            builder.append("/").append(((getAttr("SIZ") + getAttr("CON")) / 10));
+        }
+
+        builder.append(" ");
+
+        if (hasAttr("SAN")) {
+            builder.append("SAN:").append(getAttr("SAN"));
+        }
+
+        if (getAttrs().containsKey(getStandardName("克苏鲁神话"))) {
+            builder.append("/").append(99 - getAttr("克苏鲁神话"));
+        }
+
+        return builder.toString();
     }
 }
