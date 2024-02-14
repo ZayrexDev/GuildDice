@@ -24,6 +24,8 @@ public class PlayerCharacter {
     }
 
     public static String getStandardName(String orig) {
+        if (orig == null) return null;
+        orig = orig.toUpperCase();
         for (Map.Entry<String, Object> stringObjectEntry : Main.AKA_ATTR.entrySet()) {
             if (stringObjectEntry.getKey().equals(orig)) {
                 return stringObjectEntry.getKey();
