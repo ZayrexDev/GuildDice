@@ -9,7 +9,7 @@ import java.util.List;
 public class Dice {
     public DiceResult roll(DiceExpr expression) {
         final List<List<Integer>> results = new LinkedList<>();
-        expression.getParts().forEach(e -> results.add(e.calculate()));
+        expression.parts().forEach(e -> results.add(e.calculate()));
         return new DiceResult(results);
     }
 }

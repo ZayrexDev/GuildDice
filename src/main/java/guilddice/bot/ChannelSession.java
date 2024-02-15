@@ -572,7 +572,7 @@ public class ChannelSession {
                     return;
                 }
 
-                if (!DiceExpr.isValid(args[1])) {
+                if (DiceExpr.isInvalid(args[1])) {
                     bot.sendMessage(message, sb.append("骰子表达式有误qwq").toString());
                     return;
                 }

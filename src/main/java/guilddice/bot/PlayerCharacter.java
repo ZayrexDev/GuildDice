@@ -64,10 +64,6 @@ public class PlayerCharacter {
 
             sb.append(en.getValue());
 
-//            if (i % 2 != 0) {
-//                sb.append("\t");
-//            }
-
             i++;
         }
 

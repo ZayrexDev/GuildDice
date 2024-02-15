@@ -29,7 +29,7 @@ public class Main {
     public static final Path LOG_ROOT = Main.DATA_ROOT.resolve("dice-logs");
     public static final Logger LOG = LogManager.getLogger(Main.class);
     public static Config CONFIG = new Config();
-    public static LinkedList<Bot> bots = new LinkedList<>();
+    public static final LinkedList<Bot> bots = new LinkedList<>();
     public static JSONObject DEFAULT_ATTR;
     public static JSONObject AKA_ATTR;
 
