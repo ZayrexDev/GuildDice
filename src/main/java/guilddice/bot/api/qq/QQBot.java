@@ -2,11 +2,11 @@ package guilddice.bot.api.qq;
 
 import com.alibaba.fastjson2.JSONObject;
 import guilddice.bot.ChannelSession;
+import guilddice.bot.api.qq.msg.QQMessage;
+import guilddice.bot.api.qq.network.WSClient;
 import guilddice.bot.api.universal.Bot;
 import guilddice.bot.api.universal.ID;
 import guilddice.bot.api.universal.Message;
-import guilddice.bot.api.qq.msg.QQMessage;
-import guilddice.bot.api.qq.network.WSClient;
 import lombok.Getter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -23,9 +23,11 @@ public class QQBot extends Bot {
     public final Timer accessTokenRefreshTimer = new Timer();
     private final String appID;
     private final String appSecret;
+    private final HashMap<String, ChannelSession> sessions = new HashMap<>();
     @Getter
     private String accessToken = null;
     private WSClient wsClient = null;
+
     public QQBot(String appID, String appSecret) {
         this.appID = appID;
         this.appSecret = appSecret;
@@ -97,7 +99,6 @@ public class QQBot extends Bot {
     private String buildString(String endpoint) {
         return "https://api.sgroup.qq.com" + endpoint;
     }
-    private final HashMap<String, ChannelSession> sessions = new HashMap<>();
 
     public void onMessage(JSONObject d) {
         final String channelId = d.getString("channel_id");
@@ -129,7 +130,7 @@ public class QQBot extends Bot {
     }
 
     @Override
-    public void changeNickname(ID id, String nickname) {
+    public void changeNickname(String groupId, ID userId, String nickname) {
         // QQ频道貌似不支持修改名称😓
     }
 }

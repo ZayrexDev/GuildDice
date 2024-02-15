@@ -3,11 +3,14 @@ package guilddice.bot;
 import com.alibaba.fastjson2.JSONObject;
 import guilddice.Main;
 import guilddice.bot.api.universal.Bot;
+import guilddice.bot.api.universal.ID;
 import guilddice.bot.api.universal.Message;
 import guilddice.bot.logging.CheckLogEntry;
 import guilddice.bot.logging.Log;
 import guilddice.bot.logging.MsgLogEntry;
 import guilddice.bot.logging.RollLogEntry;
+import guilddice.util.BindRequest;
+import guilddice.util.Storage;
 import guilddice.util.dice.Dice;
 import guilddice.util.dice.expr.DiceExpr;
 import guilddice.util.dice.result.DiceResult;
@@ -15,6 +18,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -62,18 +66,43 @@ public class ChannelSession {
         }
     }
 
+    private void judgeCheckResult(Message message, StringBuilder reply, int result, double value) {
+        if (result == 1) {
+            reply.append("大成功！！！");
+            reply.append(comments[0][new Random().nextInt(comments[0].length)]);
+        } else if (result <= Math.floor(value / 5.0)) {
+            reply.append("极难成功！！");
+            reply.append(comments[1][new Random().nextInt(comments[1].length)]);
+        } else if (result <= Math.floor(value / 2.0)) {
+            reply.append("困难成功！");
+            reply.append(comments[2][new Random().nextInt(comments[2].length)]);
+        } else if (result <= Math.floor(value)) {
+            reply.append("成功！");
+            reply.append(comments[3][new Random().nextInt(comments[3].length)]);
+        } else {
+            if ((value <= 50 && result >= 96) || (value > 50 && result >= 100)) {
+                reply.append("大失败！！！");
+                reply.append(comments[5][new Random().nextInt(comments[5].length)]);
+            } else {
+                reply.append("失败！");
+                reply.append(comments[4][new Random().nextInt(comments[4].length)]);
+            }
+        }
+
+        bot.sendMessage(message, reply.toString());
+    }
+
     private void handleCommand(Message message) {
         final String[] args = message.getContent().split(" ");
         if (args.length == 0) return;
 
-        final UUID universalID = message.getAuthor().getID().asUuid();
+        final UUID senderUUID = message.getAuthor().getID().asUuid();
         try {
             final UUID uuid = UUID.fromString(Main.getConfig().getMasterId());
-            if (args[0].equals(".inspect") && Objects.equals(universalID, uuid)) {
+            if (args[0].equals(".inspect") && Objects.equals(senderUUID, uuid)) {
                 bot.sendMessage(message, JSONObject.from(message).toString());
                 return;
-            }
-            if (args[0].equals(".reload") && Objects.equals(universalID, uuid)) {
+            } else if (args[0].equals(".reload") && Objects.equals(senderUUID, uuid)) {
                 Main.loadConfig();
                 bot.sendMessage(message, "配置已重载。");
                 return;
@@ -81,6 +110,98 @@ public class ChannelSession {
         } catch (Exception e) {
             LOG.warn("骰主ID设置不正确。" + Main.getConfig().getMasterId());
         }
+
+        if (args[0].equals(".info")) {
+            final StringBuilder reply = new StringBuilder();
+            reply.append(message.atAuthor()).append("用户信息：\n");
+            reply.append("用户名：").append(message.getAuthor().getUsername()).append("\n");
+
+            final ID id = message.getAuthor().getID();
+            final String s = id.clazz() + " " + id.id();
+            final String str = new String(Base64.getEncoder().encode(s.getBytes(StandardCharsets.UTF_8)));
+
+            reply.append("当前环境用户ID：").append(str).append("\n");
+            reply.append("UUID：").append(senderUUID);
+
+            bot.sendMessage(message, reply.toString());
+
+            return;
+        }
+
+        if (args[0].equals(".bind")) {
+            if (args.length != 2 && args.length != 3) {
+                bot.sendMessage(message, message.atAuthor() + "指令参数有误捏~");
+                return;
+            }
+
+            if (args.length == 2) {
+                final UUID targetUuid;
+
+                try {
+                    targetUuid = UUID.fromString(args[1]);
+                } catch (Exception e) {
+                    bot.sendMessage(message, message.atAuthor() + "指令参数有误捏~");
+                    return;
+                }
+
+                final LinkedList<ID> ids = Storage.getUniversalIDs().get(targetUuid);
+                for (ID id : ids) {
+                    final boolean sameClazz = id.clazz().equals(message.getAuthor().getID().clazz());
+                    final boolean sameId = id.id().equals(message.getAuthor().getID().id());
+
+                    if (sameClazz) {
+                        bot.sendMessage(message, message.atAuthor() + "仅支持不同平台绑定~");
+                        return;
+                    }
+
+                    if (sameId) {
+                        bot.sendMessage(message, message.atAuthor() + "不可以我绑我自己哟~");
+                        return;
+                    }
+                }
+
+                final ID id = message.getAuthor().getID();
+                BindRequest.startRequest(id.asUuid(), targetUuid);
+
+                bot.sendMessage(message, message.atAuthor() + "绑定请求已发起，接下来请在另一边输入\".bind accept " + id.asUuid() + "\"");
+            } else {
+                if (!args[1].equals("accept")) {
+                    bot.sendMessage(message, message.atAuthor() + "指令参数有误捏~");
+                }
+
+                final UUID uuid;
+                try {
+                    uuid = UUID.fromString(args[2]);
+                } catch (Exception e) {
+                    bot.sendMessage(message, message.atAuthor() + "指令参数有误捏~");
+                    return;
+                }
+
+                BindRequest.clearExpired();
+                final LinkedList<BindRequest> bindRequests = BindRequest.getBindRequests();
+                bindRequests.stream().filter(bindRequest -> bindRequest.getAuthorUuid().equals(uuid)).findFirst().ifPresentOrElse(
+                        c -> {
+                            final LinkedList<ID> authorIds = Storage.getUniversalIDs().get(c.getAuthorUuid());
+                            Storage.getUniversalIDs().remove(c.getAuthorUuid());
+                            Storage.getUniversalIDs().get(c.getTargetUuid()).addAll(authorIds);
+                            try {
+                                players.get(c.getAuthorUuid()).delete();
+                            } catch (IOException e) {
+                                LOG.error("删除玩家信息失败！");
+                            }
+                            players.remove(c.getAuthorUuid());
+                            try {
+                                Storage.save();
+                            } catch (IOException e) {
+                                LOG.error("保存玩家信息失败！");
+                            }
+                            bot.sendMessage(message, message.atAuthor() + "绑定成功~");
+                        },
+                        () -> bot.sendMessage(message, message.atAuthor() + "绑定请求不存在或已过期~")
+                );
+            }
+        }
+
 
         if (!on && !args[0].equals(".switch")) {
             return;
@@ -113,10 +234,10 @@ public class ChannelSession {
                 }
             }
             case ".pc" -> {
-                reloadPlayer(universalID);
-                players.putIfAbsent(universalID, new Player(universalID, message.getAuthor().getUsername()));
+                reloadPlayer(senderUUID);
+                players.putIfAbsent(senderUUID, new Player(senderUUID, message.getAuthor().getUsername()));
 
-                final Player player = players.get(universalID);
+                final Player player = players.get(senderUUID);
 
                 switch (args[1]) {
                     case "list" -> {
@@ -196,14 +317,30 @@ public class ChannelSession {
                                     final PlayerCharacter curPC = player.getCurrentCharacter();
                                     if (curPC != null) {
                                         bot.sendMessage(message, curPC.getName() +
-                                                "的属性\n" + curPC.listAttr());
+                                                "的属性\n" + curPC.listAttr(false));
                                     } else {
                                         bot.sendMessage(message, message.atAuthor() + "未选择角色~");
                                     }
                                 } else {
                                     final String pcName = args[3];
                                     final Optional<PlayerCharacter> op = player.getCharacters().stream().filter(pc -> Objects.equals(pc.getName(), pcName)).findAny();
-                                    op.ifPresentOrElse(pc -> bot.sendMessage(message, message.atAuthor() + pc.getName() + "的属性：\n" + pc.listAttr())
+                                    op.ifPresentOrElse(pc -> bot.sendMessage(message, message.atAuthor() + pc.getName() + "的属性：\n" + pc.listAttr(true))
+                                            , () -> bot.sendMessage(message, message.atAuthor() + "无法找到角色 " + pcName + " !"));
+                                }
+                            }
+                            case "export" -> {
+                                if (args.length == 3) {
+                                    final PlayerCharacter curPC = player.getCurrentCharacter();
+                                    if (curPC != null) {
+                                        bot.sendMessage(message, curPC.getName() +
+                                                "的属性\n" + curPC.listAttr(false));
+                                    } else {
+                                        bot.sendMessage(message, message.atAuthor() + "未选择角色~");
+                                    }
+                                } else {
+                                    final String pcName = args[3];
+                                    final Optional<PlayerCharacter> op = player.getCharacters().stream().filter(pc -> Objects.equals(pc.getName(), pcName)).findAny();
+                                    op.ifPresentOrElse(pc -> bot.sendMessage(message, message.atAuthor() + pc.getName() + "的属性：\n" + pc.listAttr(false))
                                             , () -> bot.sendMessage(message, message.atAuthor() + "无法找到角色 " + pcName + " !"));
                                 }
                             }
@@ -357,9 +494,9 @@ public class ChannelSession {
                     bot.sendMessage(message, message.atAuthor() + "指令参数错误~");
                     return;
                 }
-                reloadPlayer(universalID);
-                players.putIfAbsent(universalID, new Player(universalID, message.getAuthor().getUsername()));
-                final Player player = players.get(universalID);
+                reloadPlayer(senderUUID);
+                players.putIfAbsent(senderUUID, new Player(senderUUID, message.getAuthor().getUsername()));
+                final Player player = players.get(senderUUID);
 
                 final PlayerCharacter curPC = player.getCurrentCharacter();
                 if (curPC == null) {
@@ -423,6 +560,8 @@ public class ChannelSession {
                     LOG.error("无法保存玩家信息", e);
                 }
 
+                refreshPlayerNickname(message);
+
                 bot.sendMessage(message, reply.toString());
             }
             case ".r" -> {
@@ -441,8 +580,8 @@ public class ChannelSession {
                 final DiceExpr diceExpr = DiceExpr.parse(args[1]);
                 final DiceResult result = new Dice().roll(diceExpr);
 
-                reloadPlayer(universalID);
-                final Player player = players.get(universalID);
+                reloadPlayer(senderUUID);
+                final Player player = players.get(senderUUID);
 
                 if (player != null && player.getCurrentCharacter() != null) {
                     sb.append(" ").append(player.getCurrentCharacter().getName()).append(" ");
@@ -469,8 +608,8 @@ public class ChannelSession {
                     return;
                 }
 
-                reloadPlayer(universalID);
-                final Player player = players.get(universalID);
+                reloadPlayer(senderUUID);
+                final Player player = players.get(senderUUID);
 
                 if (player == null || player.getCurrentCharacter() == null) {
                     bot.sendMessage(message, message.atAuthor() + "未选择角色~");
@@ -504,8 +643,8 @@ public class ChannelSession {
                     return;
                 }
 
-                reloadPlayer(universalID);
-                final Player player = players.get(universalID);
+                reloadPlayer(senderUUID);
+                final Player player = players.get(senderUUID);
 
                 if (player == null || player.getCurrentCharacter() == null) {
                     bot.sendMessage(message, message.atAuthor() + "未选择角色~");
@@ -568,8 +707,8 @@ public class ChannelSession {
                     return;
                 }
 
-                reloadPlayer(universalID);
-                final Player player = players.get(universalID);
+                reloadPlayer(senderUUID);
+                final Player player = players.get(senderUUID);
 
                 if (player == null || player.getCurrentCharacter() == null) {
                     bot.sendMessage(message, message.atAuthor() + "未选择角色~");
@@ -625,8 +764,8 @@ public class ChannelSession {
                     return;
                 }
 
-                reloadPlayer(universalID);
-                final Player player = players.get(universalID);
+                reloadPlayer(senderUUID);
+                final Player player = players.get(senderUUID);
 
                 if (player == null || player.getCurrentCharacter() == null) {
                     bot.sendMessage(message, message.atAuthor() + "未选择角色~");
@@ -682,8 +821,8 @@ public class ChannelSession {
                     return;
                 }
 
-                reloadPlayer(universalID);
-                final Player player = players.get(universalID);
+                reloadPlayer(senderUUID);
+                final Player player = players.get(senderUUID);
 
                 if (player == null || player.getCurrentCharacter() == null) {
                     bot.sendMessage(message, message.atAuthor() + "未选择角色~");
@@ -748,7 +887,7 @@ public class ChannelSession {
                 final DiceExpr success = DiceExpr.parse(args[1].split("/")[0]);
                 final DiceExpr fail = DiceExpr.parse(args[1].split("/")[1]);
 
-                final Player player = players.get(universalID);
+                final Player player = players.get(senderUUID);
 
                 if (player == null || player.getCurrentCharacter() == null) {
                     bot.sendMessage(message, message.atAuthor() + "未选择角色~");
@@ -808,32 +947,6 @@ public class ChannelSession {
         }
     }
 
-    private void judgeCheckResult(Message message, StringBuilder reply, int result, double value) {
-        if (result == 1) {
-            reply.append("大成功！！！");
-            reply.append(comments[0][new Random().nextInt(comments[0].length)]);
-        } else if (result <= Math.floor(value / 5.0)) {
-            reply.append("极难成功！！");
-            reply.append(comments[1][new Random().nextInt(comments[1].length)]);
-        } else if (result <= Math.floor(value / 2.0)) {
-            reply.append("困难成功！");
-            reply.append(comments[2][new Random().nextInt(comments[2].length)]);
-        } else if (result <= Math.floor(value)) {
-            reply.append("成功！");
-            reply.append(comments[3][new Random().nextInt(comments[3].length)]);
-        } else {
-            if ((value <= 50 && result >= 96) || (value > 50 && result >= 100)) {
-                reply.append("大失败！！！");
-                reply.append(comments[5][new Random().nextInt(comments[5].length)]);
-            } else {
-                reply.append("失败！");
-                reply.append(comments[4][new Random().nextInt(comments[4].length)]);
-            }
-        }
-
-        bot.sendMessage(message, reply.toString());
-    }
-
     private void reloadPlayer(UUID universalID) {
         try {
             final Player load = Player.load(universalID);
@@ -850,6 +963,6 @@ public class ChannelSession {
         if (player == null || player.getCurrentCharacter() == null) return;
         final PlayerCharacter pc = player.getCurrentCharacter();
 
-        bot.changeNickname(msg.getAuthor().getID(), pc.buildName());
+        bot.changeNickname(msg.getGroupId(), msg.getAuthor().getID(), pc.buildName());
     }
 }

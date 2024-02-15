@@ -1,13 +1,13 @@
 package guilddice.bot.api.qq.msg;
 
-import guilddice.bot.api.universal.Message;
-import guilddice.bot.api.qq.user.QQMember;
-import guilddice.bot.api.qq.user.QQUser;
-import guilddice.bot.api.universal.User;
 import guilddice.bot.api.qq.msg.extra.MessageArk;
 import guilddice.bot.api.qq.msg.extra.MessageAttachment;
 import guilddice.bot.api.qq.msg.extra.MessageEmbed;
 import guilddice.bot.api.qq.msg.extra.MessageReference;
+import guilddice.bot.api.qq.user.QQMember;
+import guilddice.bot.api.qq.user.QQUser;
+import guilddice.bot.api.universal.Message;
+import guilddice.bot.api.universal.User;
 
 import java.util.Objects;
 
@@ -188,5 +188,10 @@ public final class QQMessage extends Message {
     @Override
     public String getTimestamp() {
         return timestamp;
+    }
+
+    @Override
+    public String getGroupId() {
+        return guild_id;
     }
 }

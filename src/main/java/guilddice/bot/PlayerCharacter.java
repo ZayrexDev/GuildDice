@@ -39,19 +39,34 @@ public class PlayerCharacter {
         return orig;
     }
 
-    public String listAttr() {
+    public String listAttr(boolean tabbed) {
         final StringBuilder sb = new StringBuilder();
         int i = 1;
         for (Map.Entry<String, Integer> en : this.attrs.entrySet()) {
-            if (i != 1 && i % 2 == 1) {
-                sb.append("\n");
+            if (tabbed) {
+                if (i != 1 && i % 2 == 1) {
+                    sb.append("\n");
+                }
+            } else {
+                sb.append(" ");
             }
 
-            sb.append(en.getKey()).append(":").append(en.getValue());
 
-            if (i % 2 != 0) {
-                sb.append("\t\t");
+            if (tabbed) {
+                sb.append("\t");
             }
+
+            sb.append(en.getKey()).append(":");
+
+            if (tabbed) {
+                sb.append("\t");
+            }
+
+            sb.append(en.getValue());
+
+//            if (i % 2 != 0) {
+//                sb.append("\t");
+//            }
 
             i++;
         }

@@ -41,11 +41,11 @@ public class Player {
         }
 
         final JSONObject obj = JSONObject.parse(Files.readString(plPath));
-        if(obj == null) return null;
+        if (obj == null) return null;
 
         final Player player = new Player(id, obj.getString("name"), obj.getList("pc", PlayerCharacter.class));
         final String selectedStr = obj.getString("selected");
-        if(selectedStr != null) {
+        if (selectedStr != null) {
             player.getCharacters().stream().filter(e -> Objects.equals(e.getName(), selectedStr)).findAny().ifPresent(player::setCurrentCharacter);
         }
         return player;
@@ -68,5 +68,13 @@ public class Player {
         obj.put("pc", characters);
 
         Files.writeString(curPlPath, obj.toString());
+    }
+
+    public void delete() throws IOException {
+        final Path plPath = Main.PC_ROOT.resolve(id.toString().concat(".json"));
+        if (!Files.exists(plPath)) {
+            return;
+        }
+        Files.delete(plPath);
     }
 }

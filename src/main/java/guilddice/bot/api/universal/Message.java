@@ -6,4 +6,5 @@ public abstract class Message {
     public abstract User getAuthor();
     public abstract String atAuthor();
     public abstract String getTimestamp();
+    public abstract String getGroupId();
 }

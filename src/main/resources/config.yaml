@@ -1,5 +1,15 @@
 # GuildDice 配置文件
 
-# 开发者参数设定
-appId: appIdHere
-appSecret: appSecretHere
+# 骰主 UUID
+master-id: "00000000-0000-0000-0000-000000000000"
+
+# Bot 设定
+bots:
+# QQ频道的配置如下:
+#  - type: "qq"
+#    appId: "(你的AppID)"
+#    appSecret: "(你的AppSecret)"
+#
+# KOOK的配置如下:
+#  - type: "kook"
+#    token: "(你的Token)"

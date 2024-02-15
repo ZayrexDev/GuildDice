@@ -1,6 +1,7 @@
 package guilddice;
 
 import com.alibaba.fastjson2.JSONObject;
+import guilddice.bot.api.kook.KOOKBot;
 import guilddice.bot.api.qq.QQBot;
 import guilddice.bot.api.universal.Bot;
 import guilddice.util.Config;
@@ -10,9 +11,11 @@ import org.apache.logging.log4j.Logger;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.Objects;
 
 public class Main {
@@ -24,10 +27,11 @@ public class Main {
     public static final Path PC_ROOT = Main.DATA_ROOT.resolve("pc");
     public static final Path LOG_TEMP_ROOT = Main.DATA_ROOT.resolve("dice-logs-temp");
     public static final Path LOG_ROOT = Main.DATA_ROOT.resolve("dice-logs");
+    public static final Logger LOG = LogManager.getLogger(Main.class);
     public static Config CONFIG = new Config();
+    public static LinkedList<Bot> bots = new LinkedList<>();
     public static JSONObject DEFAULT_ATTR;
     public static JSONObject AKA_ATTR;
-    public static final Logger LOG = LogManager.getLogger(Main.class);
 
     public static void main(String[] args) {
         if (!Files.exists(CONFIG_ROOT)) {
@@ -51,9 +55,13 @@ public class Main {
             }
         }
 
-        Bot bot = new QQBot(CONFIG.getAppId(), CONFIG.getAppSecret());
+        LOG.info("读取了 {} 个 Bot 配置。正在启动...", bots.size());
 
-        bot.connect();
+        for (Bot bot : bots) {
+            new Thread(bot::connect).start();
+        }
+
+        LOG.info("启动完成。");
     }
 
     public static Config getConfig() {
@@ -61,9 +69,27 @@ public class Main {
     }
 
     public static void loadConfig() throws IOException {
+        CONFIG = new Config();
+
         Yaml yaml = new Yaml();
-        InputStream is = Files.newInputStream(CONFIG_PATH);
-        CONFIG = yaml.loadAs(is, Config.class);
+        final LinkedHashMap<String, Object> load = yaml.load(Files.newInputStream(CONFIG_PATH));
+        CONFIG.setMasterId((String) load.get("master-id"));
+
+        @SuppressWarnings("unchecked") final ArrayList<Object> confBots = (ArrayList<Object>) load.get("bots");
+        for (var e : confBots) {
+            @SuppressWarnings("unchecked") final LinkedHashMap<String, Object> bot = (LinkedHashMap<String, Object>) e;
+
+            switch ((String) bot.get("type")) {
+                case "qq" -> {
+                    QQBot qqBot = new QQBot((String) bot.get("appId"), (String) bot.get("appSecret"));
+                    bots.add(qqBot);
+                }
+                case "kook" -> {
+                    KOOKBot kookBot = new KOOKBot((String) bot.get("token"));
+                    bots.add(kookBot);
+                }
+            }
+        }
 
         if (Files.exists(DEFAULT_ATTR_PATH)) {
             DEFAULT_ATTR = JSONObject.parseObject(Files.readString(DEFAULT_ATTR_PATH));
